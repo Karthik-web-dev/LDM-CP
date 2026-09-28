@@ -1,0 +1,110 @@
+.editor-scroll {
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+  background: var(--canvas);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.editor-canvas {
+  display: block;
+  touch-action: none;
+  user-select: none;
+}
+
+.grid-dot { fill: var(--grid); }
+
+.empty-hint {
+  fill: var(--text-muted);
+  font-size: 14px;
+  text-anchor: middle;
+}
+
+/* ---- wires ---- */
+.wire {
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+.wire.off { stroke: var(--wire-off); }
+.wire.on { stroke: var(--signal-on); filter: drop-shadow(0 0 2px var(--signal-glow)); }
+.wire.unknown { stroke: var(--wire-unknown); stroke-dasharray: 5 4; }
+.wire.pending { stroke: var(--accent); stroke-dasharray: 4 4; }
+.wire.selected { stroke-width: 4; stroke: var(--accent); }
+.wire-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 12;
+  cursor: pointer;
+}
+.wire-group:hover .wire { stroke-width: 3.5; }
+
+/* ---- components ---- */
+.component-body { cursor: grab; }
+.component-body:active { cursor: grabbing; }
+.component.input .component-body { cursor: pointer; }
+
+.component-id {
+  font-size: 9px;
+  fill: var(--text-muted);
+  font-family: var(--mono);
+}
+
+.io-box {
+  fill: var(--component-fill);
+  stroke: var(--component-stroke);
+  stroke-width: 1.5;
+}
+.io-label {
+  font-size: 14px;
+  font-weight: 600;
+  fill: var(--text);
+  font-family: var(--mono);
+}
+
+.switch { fill: var(--wire-off); transition: fill 0.12s; }
+.switch.on { fill: var(--signal-on); }
+.switch-knob { fill: #fff; stroke: none; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.25)); transition: cx 0.12s; }
+
+.lamp { stroke: var(--component-stroke); stroke-width: 1.5; transition: fill 0.12s; }
+.lamp.on { fill: var(--signal-on); filter: drop-shadow(0 0 6px var(--signal-glow)); }
+.lamp.off { fill: var(--wire-off); }
+.lamp.unknown { fill: var(--surface-3); }
+
+.gate-body {
+  fill: var(--component-fill);
+  stroke: var(--component-stroke);
+  stroke-width: 1.8;
+}
+.gate-extra {
+  fill: none;
+  stroke: var(--component-stroke);
+  stroke-width: 1.8;
+}
+.lead { stroke: var(--component-stroke); stroke-width: 1.8; }
+.gate-label {
+  font-size: 9px;
+  font-weight: 700;
+  fill: var(--text-muted);
+  text-anchor: middle;
+  pointer-events: none;
+  font-family: var(--mono);
+}
+
+.component.selected .gate-body,
+.component.selected .io-box { stroke: var(--accent); stroke-width: 2.2; }
+.component.selected .component-id { fill: var(--accent); }
+.component.has-error .gate-body,
+.component.has-error .io-box { stroke: var(--danger); stroke-width: 2.5; }
+.component.has-error .component-id { fill: var(--danger); font-weight: 700; }
+.component.focused .gate-body,
+.component.focused .io-box { filter: drop-shadow(0 0 6px var(--accent)); }
+
+/* ---- ports ---- */
+.port { cursor: crosshair; }
+.port-hit { fill: transparent; }
+.port-dot { fill: var(--component-fill); stroke: var(--component-stroke); stroke-width: 1.5; }
+.port:hover .port-dot { fill: var(--accent); stroke: var(--accent); }

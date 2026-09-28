@@ -1,0 +1,57 @@
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+.tool-group { display: flex; flex-wrap: wrap; gap: 2px; align-items: center; }
+.tool-group.end { margin-left: auto; gap: 6px; }
+.tool-divider { width: 1px; align-self: stretch; margin: 4px 2px; background: var(--border); }
+
+.tool-btn {
+  height: 34px;
+  padding: 0 8px;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text);
+  font-size: 12.5px;
+}
+.tool-btn:hover:not(:disabled) { background: var(--surface-2); border-color: var(--border); }
+.gate-btn { flex-direction: column; gap: 0; height: 44px; min-width: 50px; padding: 2px 6px; }
+.gate-btn span { font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.02em; }
+.gate-btn:hover span { color: var(--text); }
+
+.gate-icon { width: 34px; height: 20px; overflow: visible; }
+.gate-icon .gate-body, .gate-icon .gate-extra { stroke-width: 3.2; }
+.gate-icon .lead { stroke-width: 3.2; }
+
+.io-icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; color: var(--text-muted); }
+
+/* ---- Inspector bar ---- */
+.inspector {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  min-height: 42px;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: 13px;
+}
+.inspector.muted { color: var(--text-muted); font-size: 12.5px; }
+.inspector > code { padding: 2px 6px; border-radius: 4px; background: var(--surface-2); color: var(--text-muted); }
+.inspector label { display: flex; align-items: center; gap: 6px; color: var(--text-muted); }
+.inspector input, .inspector select { height: 28px; }
+.inspector input[type="text"] { width: 96px; font-family: var(--mono); }
+.inspector input[type="number"] { width: 60px; }
+.inspector .field-error { color: var(--danger); font-size: 12px; }
+.inspector button { height: 28px; }
+.inspector .danger { margin-left: auto; }

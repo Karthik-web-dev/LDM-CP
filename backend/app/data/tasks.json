@@ -1,0 +1,68 @@
+[
+  {
+    "id": "and_gate_001",
+    "title": "Build an AND circuit",
+    "description": "Create a circuit whose output Y is 1 only when A and B are both 1.",
+    "expected_expression": "A AND B",
+    "inputs": ["A", "B"],
+    "outputs": ["Y"]
+  },
+  {
+    "id": "and_or_001",
+    "title": "AND into OR",
+    "description": "Build Y = (A AND B) OR C.",
+    "expected_expression": "(A AND B) OR C",
+    "inputs": ["A", "B", "C"],
+    "outputs": ["Y"]
+  },
+  {
+    "id": "nand_from_basics",
+    "title": "NAND from AND and NOT",
+    "description": "Build a NAND function using only AND and NOT gates: Y is 0 only when A and B are both 1.",
+    "expected_expression": "NOT (A AND B)",
+    "inputs": ["A", "B"],
+    "outputs": ["Y"],
+    "hint": "Invert the output of an AND gate."
+  },
+  {
+    "id": "xor_from_basics",
+    "title": "XOR from AND, OR, NOT",
+    "description": "Build Y = A XOR B (1 when exactly one input is 1) using AND, OR, and NOT gates.",
+    "expected_expression": "A XOR B",
+    "inputs": ["A", "B"],
+    "outputs": ["Y"],
+    "hint": "A XOR B = (A AND NOT B) OR (NOT A AND B)."
+  },
+  {
+    "id": "majority_3",
+    "title": "Majority of three",
+    "description": "Y is 1 when at least two of A, B, C are 1.",
+    "expected_expression": "(A AND B) OR (A AND C) OR (B AND C)",
+    "inputs": ["A", "B", "C"],
+    "outputs": ["Y"]
+  },
+  {
+    "id": "mux_2to1",
+    "title": "2-to-1 multiplexer",
+    "description": "Y equals A when S is 0, and equals B when S is 1.",
+    "expected_expression": "(A AND NOT S) OR (B AND S)",
+    "inputs": ["S", "A", "B"],
+    "outputs": ["Y"]
+  },
+  {
+    "id": "half_adder",
+    "title": "Half adder",
+    "description": "Add two bits A and B. S is the sum bit and C is the carry bit.",
+    "expected_outputs": {"S": "A XOR B", "C": "A AND B"},
+    "inputs": ["A", "B"],
+    "outputs": ["S", "C"]
+  },
+  {
+    "id": "full_adder",
+    "title": "Full adder",
+    "description": "Add bits A, B and carry-in Cin. S is the sum bit and Cout the carry-out.",
+    "expected_outputs": {"S": "A XOR B XOR Cin", "Cout": "(A AND B) OR (Cin AND (A XOR B))"},
+    "inputs": ["A", "B", "Cin"],
+    "outputs": ["S", "Cout"]
+  }
+]

@@ -1,0 +1,48 @@
+.kmap-panel { display: flex; flex-direction: column; gap: 10px; }
+.kmap-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.kmap-list { display: flex; flex-wrap: wrap; gap: 20px; }
+
+.kmap { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.kmap figcaption { font-family: var(--mono); font-size: 13px; display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+.kmap-output { font-weight: 700; }
+.kmap-sop { color: var(--text); }
+
+.kmap-grid { border-collapse: separate; border-spacing: 3px; font-family: var(--mono); }
+.kmap-head {
+  font-size: 11px; font-weight: 500; color: var(--text-muted);
+  padding: 2px 6px; text-align: center;
+}
+.kmap-corner {
+  position: relative; width: 44px; height: 30px;
+  font-size: 10px; font-weight: 600; color: var(--text-muted);
+  background: linear-gradient(to top right, transparent calc(50% - 0.5px), var(--border-strong) 50%, transparent calc(50% + 0.5px));
+}
+.corner-row { position: absolute; left: 3px; bottom: 1px; }
+.corner-col { position: absolute; right: 3px; top: 1px; }
+
+.kmap-cell {
+  position: relative;
+  width: 40px; height: 36px;
+  text-align: center;
+  border-radius: 6px;
+  background: var(--surface-2);
+  transition: opacity 0.12s, box-shadow 0.12s;
+}
+.kmap-cell.dim { opacity: 0.35; }
+.kmap-value { font-size: 14px; font-weight: 700; }
+.kmap-cell.v0 .kmap-value { color: var(--text-faint); font-weight: 500; }
+.kmap-cell.vX .kmap-value { color: var(--warn); }
+.kmap-minterm { position: absolute; right: 4px; top: 2px; font-size: 8.5px; color: var(--text-faint); }
+
+.kmap-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.kmap-legend li {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: default;
+  outline: none;
+}
+.kmap-legend li.active, .kmap-legend li:focus-visible { border-color: var(--border-strong); background: var(--surface-2); }
+.kmap-legend .swatch { width: 10px; height: 10px; border-radius: 3px; }
