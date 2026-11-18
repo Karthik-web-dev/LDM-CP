@@ -77,6 +77,74 @@ class KMapResponse(BaseModel):
     errors: list[str] = Field(default_factory=list)
 
 
+class GenerateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    task_id: str | None = Field(default=None, max_length=64)
+    task: Task | None = None
+    prompt: str | None = Field(default=None, max_length=1000)  # optional extra instructions
+    # "live" asks the AI (with retries and a stored-circuit fallback); "demo" only uses the stored circuit.
+    mode: Literal["live", "demo"] = "live"
+    # "describe": plain-language request only, no target (the AI states what it builds and is checked against that).
+    # "target": build from scratch for the given target. "extend": improve `circuit` so it meets the given target.
+    intent: Literal["describe", "target", "extend"] = "target"
+    circuit: Circuit | None = None  # the student's current circuit, for intent "extend"
+
+
+class GenerateResponse(BaseModel):
+    success: bool
+    # "ai": verified AI circuit. "stored": demo mode. "fallback": the AI failed, the stored circuit is shown. "none": nothing.
+    source: Literal["ai", "stored", "fallback", "none"]
+    circuit: Circuit | None = None
+    explanation: str | None = None
+    attempts: int = 0
+    notice: str | None = None
+    model: str | None = None
+    # intent "describe": the target the AI says it built to, so it can be adopted as the student's target.
+    spec: Task | None = None
+    # A stored circuit for this exercise was shown (the workspace should switch to that exercise).
+    matched_task_id: str | None = None
+
+
+class DemoMatchRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    prompt: str = Field(max_length=300)
+    # Strict: only distinctive circuit names count (used to decide whether live AI text names a circuit).
+    strict: bool = False
+
+
+class DemoEntryOut(BaseModel):
+    task_id: str
+    title: str
+    style: Literal["gates", "ic"]  # stored circuit built from basic gates, or using an IC / block
+    parts: list[str]
+
+
+class DemoMatchOut(BaseModel):
+    task_id: str
+    title: str
+    style: Literal["gates", "ic"]
+    score: float
+    phrase: str  # the stored phrase your words matched
+    full: bool  # a whole phrase matched (False: only a suggestion)
+
+
+class DemoMatchResponse(BaseModel):
+    # The circuit to open (a whole stored phrase was matched), or None when only suggestions exist.
+    best: DemoMatchOut | None = None
+    matches: list[DemoMatchOut] = Field(default_factory=list)
+
+
+class GoldenCircuit(BaseModel):
+    """A stored, verified circuit for a built-in exercise (the demo circuit)."""
+
+    task_id: str
+    title: str
+    source: str  # "reference" (built by app.tools.build_golden) or "recorded" (a saved AI answer)
+    circuit: Circuit
+
+
 class GateInfo(BaseModel):
     type: str
     min_inputs: int

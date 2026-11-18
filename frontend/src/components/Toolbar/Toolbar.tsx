@@ -1,7 +1,5 @@
 import type { Dispatch } from "react";
 import type { EditorAction } from "../../circuit/editorReducer";
-import { GATE_ORDER, GATES } from "../../circuit/gateLibrary";
-import { GateShape } from "../CircuitEditor/CircuitEditor";
 import "./Toolbar.css";
 
 interface Props {
@@ -11,62 +9,74 @@ interface Props {
   validating: boolean;
   hinting: boolean;
   canValidate: boolean;
+  powered: boolean;
+  onTogglePower: () => void;
+  hasSequential: boolean;
+  onLoadDemo: () => void;
+  canLoadDemo: boolean;
+  demoLoading: boolean;
+  demoMode: boolean; // no AI calls while presenting
+  hasClock: boolean; // the circuit contains a clock source
+  clocksRunning: boolean;
+  onToggleClocks: () => void;
 }
 
-function GateIcon({ type }: { type: (typeof GATE_ORDER)[number] }) {
-  const pins = GATES[type].defaultInputs;
+/** Action bar above the workspace: clear, AI hint, validate, and the simulation power switch. */
+export function Toolbar({ dispatch, onValidate, onHint, validating, hinting, canValidate, powered, onTogglePower, hasSequential, onLoadDemo, canLoadDemo, demoLoading, demoMode, hasClock, clocksRunning, onToggleClocks }: Props) {
   return (
-    <svg viewBox="-2 -2 74 44" className="gate-icon" aria-hidden>
-      <GateShape x={0} y={0} w={70} h={40} type={type} pins={pins} showLabel={false} />
-    </svg>
-  );
-}
-
-export function Toolbar({ dispatch, onValidate, onHint, validating, hinting, canValidate }: Props) {
-  return (
-    <div className="toolbar" role="toolbar" aria-label="Circuit tools">
-      <div className="tool-group">
-        <button type="button" className="tool-btn" onClick={() => dispatch({ type: "add", kind: "input" })} title="Add an input switch">
-          <svg viewBox="0 0 24 24" className="io-icon" aria-hidden><rect x="3" y="7" width="14" height="10" rx="5" /><circle cx="8" cy="12" r="3" /><path d="M17 12h4" /></svg>
-          Input
+    <div className="toolbar" role="toolbar" aria-label="Circuit actions">
+      <button
+        type="button"
+        className="ghost"
+        onClick={() => {
+          if (confirm("Remove every component from the workspace?")) dispatch({ type: "clear" });
+        }}
+      >
+        Clear
+      </button>
+      {hasSequential && (
+        <button type="button" className="ghost" onClick={() => dispatch({ type: "resetSequential" })} title="Set every flip-flop and latch to 0">
+          Reset flip-flops
         </button>
-        <button type="button" className="tool-btn" onClick={() => dispatch({ type: "add", kind: "output" })} title="Add an output lamp">
-          <svg viewBox="0 0 24 24" className="io-icon" aria-hidden><path d="M3 12h5" /><circle cx="14" cy="12" r="6" /></svg>
-          Output
-        </button>
-      </div>
-      <span className="tool-divider" aria-hidden />
-      <div className="tool-group gates">
-        {GATE_ORDER.map((g) => (
-          <button
-            key={g}
-            type="button"
-            className="tool-btn gate-btn"
-            onClick={() => dispatch({ type: "add", kind: "gate", gateType: g })}
-            title={`Add ${g === "BUFFER" ? "a buffer" : `an ${g}`} gate`}
-          >
-            <GateIcon type={g} />
-            <span>{g === "BUFFER" ? "BUF" : g}</span>
-          </button>
-        ))}
-      </div>
-      <div className="tool-group end">
+      )}
+      {hasClock && (
         <button
           type="button"
-          className="ghost"
-          onClick={() => {
-            if (confirm("Remove every component from the canvas?")) dispatch({ type: "clear" });
-          }}
+          aria-pressed={clocksRunning}
+          className={clocksRunning ? "primary" : ""}
+          onClick={onToggleClocks}
+          title="Start or stop every clock source at its own frequency"
         >
-          Clear
+          {clocksRunning ? "Stop clocks" : "Run clocks"}
         </button>
-        <button type="button" onClick={onHint} disabled={hinting || !canValidate} title="Ask the AI tutor for a nudge towards the next step">
-          {hinting ? "Thinking…" : "Hint"}
-        </button>
-        <button type="button" className="primary" onClick={onValidate} disabled={validating || !canValidate}>
-          {validating ? "Checking…" : "Validate"}
-        </button>
-      </div>
+      )}
+      <span className="tool-divider" aria-hidden />
+      <button
+        type="button"
+        onClick={onLoadDemo}
+        disabled={!canLoadDemo || demoLoading}
+        title="Place the stored, verified circuit for this exercise on the workspace and check it (no AI, no network needed)"
+      >
+        {demoLoading ? "Loading…" : "Load demo"}
+      </button>
+      <button type="button" onClick={onHint} disabled={hinting || !canValidate || demoMode} title={demoMode ? "Demo mode: the AI is not called" : "Ask the AI tutor for a nudge towards the next step"}>
+        {hinting ? "Thinking…" : "Hint"}
+      </button>
+      <button type="button" className="primary" onClick={onValidate} disabled={validating || !canValidate}>
+        {validating ? "Checking…" : "Validate"}
+      </button>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={powered}
+        className={`power-switch ${powered ? "on" : ""}`}
+        onClick={onTogglePower}
+        title={powered ? "Simulation running. Click to stop." : "Simulation stopped. Click to start."}
+      >
+        <span className="power-o">O</span>
+        <span className="power-knob" aria-hidden />
+        <span className="power-i">I</span>
+      </button>
     </div>
   );
 }

@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from "react";
-import { fetchTasks, outputLabels, validateCircuit, type AIFeedback, type AIMode, type Target, type Task, type ValidateResponse } from "../api/validationApi";
-import { serializeCircuit } from "../circuit/circuitSerializer";
-import type { EditorState } from "../circuit/circuitTypes";
+import { fetchDemoCatalog, fetchGolden, fetchTasks, generateCircuit, matchDemo, outputLabels, validateCircuit, type AIFeedback, type AIMode, type BuildIntent, type DemoEntry, type GenerateResponse, type Target, type Task, type ValidateResponse } from "../api/validationApi";
+import { deserializeCircuit, serializeCircuit } from "../circuit/circuitSerializer";
+import type { EditorState, NormalizedCircuit } from "../circuit/circuitTypes";
 import { editorReducer, emptyEditorState } from "../circuit/editorReducer";
-import { simulate } from "../circuit/simulator";
+import { clockHalfPeriodMs } from "../circuit/gateLibrary";
+import { hasSequential, simulate } from "../circuit/simulator";
 import { CircuitEditor, type Selection } from "../components/CircuitEditor/CircuitEditor";
+import { AiBuildPanel } from "../components/AiBuild/AiBuildPanel";
 import { ErrorMessage } from "../components/ErrorMessage/ErrorMessage";
 import { KMapPanel } from "../components/KMap/KMap";
 import { TargetEditor } from "../components/TargetEditor/TargetEditor";
 import { CUSTOM_TASK_ID, defaultDraft, type TargetDraft } from "../components/TargetEditor/targetDraft";
 import { TaskPanel } from "../components/TaskPanel/TaskPanel";
+import { PartsBin } from "../components/PartsBin/PartsBin";
 import { Inspector } from "../components/Toolbar/Inspector";
 import { Toolbar } from "../components/Toolbar/Toolbar";
 import { ValidationPanel, type Phase } from "../components/ValidationPanel/ValidationPanel";
@@ -18,6 +21,7 @@ const circuitKey = (taskId: string) => `ldm.circuit.${taskId}`;
 const LAST_TASK_KEY = "ldm.lastTask";
 const CUSTOM_TASK_KEY = "ldm.customTask";
 const CUSTOM_DRAFT_KEY = "ldm.customDraft";
+const DEMO_MODE_KEY = "ldm.demoMode";
 
 function load<T>(key: string): T | null {
   try {
@@ -55,7 +59,20 @@ function draftFromExercise(task: Task): TargetDraft {
   return { ...draft, mode: "equation", equations };
 }
 
-type Tab = "target" | "results" | "json";
+type Tab = "target" | "results" | "ai" | "json";
+
+/** The clock input of a task with memory, if it has one (latches have none). */
+const clockOf = (t: Task | null | undefined): string | undefined => t?.sequence?.clock ?? undefined;
+
+/** One line saying what the selected target is, so it is clear what the AI will build. */
+function describeTarget(task: Task | null): string {
+  if (!task) return "No target selected";
+  if (task.sequence) return `${task.title || task.id} (behaviour checked step by step)`;
+  if (task.expected_truth_table) return `${task.title || "Custom target"} (truth table for ${Object.keys(task.expected_truth_table).join(", ")})`;
+  const equations = Object.entries(task.expected_outputs ?? { [task.outputs[0] ?? "Y"]: task.expected_expression ?? "" });
+  const text = equations.map(([label, expr]) => `${label} = ${expr}`).join("; ");
+  return task.title ? `${task.title}: ${text}` : `Custom target: ${text}`;
+}
 
 export function CircuitPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -78,7 +95,21 @@ export function CircuitPage() {
 
   const isCustom = taskId === CUSTOM_TASK_ID;
   const task = isCustom ? customTask : (tasks.find((t) => t.id === taskId) ?? null);
-  const signals = useMemo(() => simulate(state), [state]);
+  // Demo mode: no AI calls anywhere (validation, hints, building), so a presentation cannot depend on the network.
+  const [demoMode, setDemoMode] = useState<boolean>(() => load<boolean>(DEMO_MODE_KEY) === true);
+  const [buildIntent, setBuildIntent] = useState<BuildIntent>("target");
+  const [building, setBuilding] = useState(false);
+  const [buildResult, setBuildResult] = useState<GenerateResponse | null>(null);
+  const [buildError, setBuildError] = useState<string | null>(null);
+  const [catalog, setCatalog] = useState<DemoEntry[]>([]);
+  const [demo, setDemo] = useState<{ source: string; key: string; title?: string } | null>(null);
+  const [demoLoading, setDemoLoading] = useState(false);
+  const [autoValidate, setAutoValidate] = useState(false);
+  const [powered, setPowered] = useState(true);
+  // Inputs being clocked right now (clock sources at their frequency, other inputs at 1 Hz).
+  const [running, setRunning] = useState<Record<string, boolean>>({});
+  // With the power switch off nothing is simulated: every wire and lamp shows as unknown.
+  const signals = useMemo(() => (powered ? simulate(state) : new Map<string, boolean | undefined>()), [state, powered]);
   const normalized = useMemo(() => serializeCircuit(state), [state]);
   const currentKey = useMemo(() => semanticKey(state), [state]);
   const target: Target | null = !task ? null : isCustom ? { task: customTask! } : { taskId: taskId! };
@@ -90,9 +121,11 @@ export function CircuitPage() {
     setValidateError(null);
     setPhase("idle");
     setFocusIds(new Set());
+    setRunning({}); // never carry a running clock into another circuit
   };
 
-  const scaffold = (t: Task) => dispatch({ type: "scaffold", inputs: t.inputs, outputs: t.outputs.length ? t.outputs : outputLabels(t) });
+  const scaffold = (t: Task) =>
+    dispatch({ type: "scaffold", inputs: t.inputs, outputs: t.outputs.length ? t.outputs : outputLabels(t), clock: clockOf(t) });
 
   const openTask = (id: string, list: Task[], custom: Task | null) => {
     const target = id === CUSTOM_TASK_ID ? custom : list.find((x) => x.id === id);
@@ -110,6 +143,11 @@ export function CircuitPage() {
     }
     setTab(id === CUSTOM_TASK_ID && !custom ? "target" : "results");
   };
+
+  useEffect(() => {
+    // The demo button and the list of stored circuits; a failure just hides them.
+    fetchDemoCatalog().then(setCatalog).catch(() => setCatalog([]));
+  }, []);
 
   useEffect(() => {
     fetchTasks()
@@ -155,7 +193,176 @@ export function CircuitPage() {
     scaffold(t);
   };
 
-  const onValidate = async () => {
+  /** Put a generated or stored circuit on the workspace and check it (without any AI call). */
+  const placeCircuit = (circuit: NormalizedCircuit, source: string, title?: string, clock?: string | string[]) => {
+    const base = deserializeCircuit(circuit);
+    // Clock inputs (the clock of a sequential exercise, or clocks already on the workspace) stay real clock sources.
+    const clockLabels = new Set(typeof clock === "string" ? [clock] : (clock ?? []));
+    const next: EditorState = clockLabels.size
+      ? { ...base, components: base.components.map((c) => (c.kind === "input" && c.label && clockLabels.has(c.label) ? { ...c, clockHz: c.clockHz ?? 1 } : c)) }
+      : base;
+    resetResults();
+    setSelection(null);
+    dispatch({ type: "load", state: next });
+    setDemo({ source, key: semanticKey(next), title });
+    setAutoValidate(true);
+  };
+
+  const changeDemoMode = (on: boolean) => {
+    setDemoMode(on);
+    save(DEMO_MODE_KEY, on);
+  };
+
+  const titleOf = (id: string) => tasks.find((t) => t.id === id)?.title ?? id;
+
+  /**
+   * Open the stored circuit for exercise `id`. The workspace switches to that exercise first, so the
+   * circuit is checked against its own target whichever exercise was selected before.
+   */
+  const showStored = async (id: string, note?: string) => {
+    const golden = await fetchGolden(id);
+    if (id !== taskId) openTask(id, tasks, customTask);
+    placeCircuit(golden.circuit, golden.source, titleOf(id), clockOf(tasks.find((t) => t.id === id)));
+    setTab("results");
+    setBuildResult({
+      success: true, source: "stored", circuit: golden.circuit, attempts: 0, model: null,
+      explanation: `Opened the stored circuit for "${titleOf(id)}".`, notice: note ?? null,
+    });
+  };
+
+  /** Open a stored circuit chosen from the list in the AI build tab. */
+  const pickStored = async (id: string) => {
+    setBuilding(true);
+    setBuildError(null);
+    try {
+      await showStored(id);
+    } catch (e) {
+      setBuildError((e as Error).message);
+    } finally {
+      setBuilding(false);
+    }
+  };
+
+  /**
+   * Demo mode: what was typed ("half adder") is matched to a stored circuit by deterministic text
+   * matching, and that circuit is opened. Live mode: the AI builds it (verified, with retries); a
+   * clearly named exercise in the text switches the workspace to that exercise first.
+   */
+  const buildWithAi = async (prompt: string) => {
+    const text = prompt.trim();
+    setBuilding(true);
+    setBuildError(null);
+    setBuildResult(null);
+    try {
+      if (demoMode) {
+        let id = taskId && !isCustom ? taskId : null;
+        let note: string | undefined;
+        if (text) {
+          const found = await matchDemo(text);
+          if (!found.best) {
+            const hints = found.matches.map((m) => m.title).join(", ");
+            setBuildResult({
+              success: false, source: "none", circuit: null, explanation: null, attempts: 0, model: null,
+              notice: `No stored circuit matches "${text}".${hints ? ` Did you mean: ${hints}?` : " Pick one from the list below."}`,
+            });
+            return;
+          }
+          id = found.best.task_id;
+          note = `Matched "${text}" to ${found.best.title} (${found.best.style === "ic" ? "uses an IC" : "basic gates"}).`;
+        }
+        if (!id) {
+          setBuildError("Type what to open, or pick an exercise first.");
+          return;
+        }
+        await showStored(id, note);
+        return;
+      }
+
+      if (buildIntent === "describe") {
+        // No target: the AI works out what to build from the words, and the target it built to becomes ours.
+        if (!text) {
+          setBuildError("Describe the circuit you want first.");
+          return;
+        }
+        const response = await generateCircuit(null, text, "live", undefined, { intent: "describe" });
+        setBuildResult(response);
+        if (response.circuit && response.spec) {
+          applyCustomTarget(response.spec);
+          if (!response.spec.sequence) setDraft(draftFromExercise(response.spec));
+          placeCircuit(response.circuit, "ai", response.spec.title, clockOf(response.spec));
+        } else if (response.circuit && response.matched_task_id) {
+          const id = response.matched_task_id;
+          openTask(id, tasks, customTask);
+          placeCircuit(response.circuit, "fallback", titleOf(id), clockOf(tasks.find((t) => t.id === id)));
+        }
+        return;
+      }
+
+      if (buildIntent === "extend") {
+        // Build on what is on the workspace; the AI must keep the target satisfied.
+        if (!target) {
+          setBuildError("Pick an exercise or set a custom target first.");
+          return;
+        }
+        const clocks = state.components.filter((c) => c.kind === "input" && c.clockHz !== undefined && c.label).map((c) => c.label!);
+        const response = await generateCircuit(target, text, "live", undefined, { intent: "extend", circuit: serializeCircuit(state) });
+        setBuildResult(response);
+        const exerciseClock = clockOf(task);
+        if (response.circuit) placeCircuit(response.circuit, "ai", task?.title, exerciseClock ? [...clocks, exerciseClock] : clocks);
+        return;
+      }
+
+      let liveTarget = target;
+      let switchNote: string | null = null;
+      if (text) {
+        // A circuit named in the text (for example "full adder using 74153") selects that exercise.
+        const found = await matchDemo(text, true).catch(() => null);
+        if (found?.best && found.best.task_id !== taskId) {
+          liveTarget = { taskId: found.best.task_id };
+          switchNote = `Your request matched "${found.best.title}", so that exercise's target was used${isCustom ? " instead of your custom target" : ""}.`;
+          openTask(found.best.task_id, tasks, customTask);
+        }
+      }
+      if (!liveTarget) return;
+      const response = await generateCircuit(liveTarget, prompt, "live");
+      setBuildResult({ ...response, notice: [switchNote, response.notice].filter(Boolean).join(" ") || null });
+      if (response.circuit) {
+        const builtFor = "taskId" in liveTarget ? tasks.find((t) => t.id === liveTarget.taskId) : liveTarget.task;
+        placeCircuit(response.circuit, response.source === "ai" ? "ai" : "fallback", builtFor?.title, clockOf(builtFor));
+      }
+    } catch (e) {
+      setBuildError((e as Error).message);
+    } finally {
+      setBuilding(false);
+    }
+  };
+
+  /** Place the stored circuit for this exercise on the workspace, then check it without any AI call. */
+  const loadDemo = async () => {
+    if (!taskId || isCustom) return;
+    setDemoLoading(true);
+    try {
+      const golden = await fetchGolden(taskId);
+      placeCircuit(golden.circuit, golden.source, golden.title, clockOf(task));
+    } catch (e) {
+      setValidateError((e as Error).message);
+      setTab("results");
+    } finally {
+      setDemoLoading(false);
+    }
+  };
+
+  // Validate once the demo circuit is in the editor state (this runs after the re-render).
+  useEffect(() => {
+    if (!autoValidate) return;
+    setAutoValidate(false);
+    void runValidate(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoValidate]);
+
+  const onValidate = () => runValidate(demoMode);
+
+  const runValidate = async (skipAi: boolean) => {
     if (!taskId) return;
     if (isCustom && !customTask) {
       setTab("target");
@@ -178,7 +385,7 @@ export function CircuitPage() {
       setResult(analysis);
       setValidatedKey(key);
       const det = analysis.deterministic;
-      if (!det.structurally_valid || det.errors.length) {
+      if (!det.structurally_valid || det.errors.length || skipAi) {
         setAi(analysis.ai);
         setPhase("done");
         return;
@@ -234,9 +441,36 @@ export function CircuitPage() {
   };
 
   const exercise = !isCustom ? task : null;
+  const sequential = !!task?.sequence;
+
+  // Running clocks: each toggles its input every half period (two toggles = one full pulse).
+  const clockPlan = state.components
+    .filter((c) => c.kind === "input" && running[c.id])
+    .map((c) => `${c.id}@${c.clockHz ?? 1}`)
+    .join(",");
+  useEffect(() => {
+    if (!clockPlan) return;
+    const timers = clockPlan.split(",").map((entry) => {
+      const [id, hz] = entry.split("@");
+      return setInterval(() => dispatch({ type: "toggleInput", id }), clockHalfPeriodMs(Number(hz)));
+    });
+    return () => timers.forEach(clearInterval);
+  }, [clockPlan]);
+
+  const clockIds = state.components.filter((c) => c.kind === "input" && c.clockHz !== undefined).map((c) => c.id);
+  const clocksRunning = clockIds.some((id) => running[id]);
+  const toggleRun = (id: string) => setRunning((r) => ({ ...r, [id]: !r[id] }));
+  const toggleClocks = () => setRunning((r) => ({ ...r, ...Object.fromEntries(clockIds.map((id) => [id, !clocksRunning])) }));
 
   return (
     <div className="app">
+      <div className="titlebar">
+        <span className="titlebar-name">LDM Circuit Lab</span>
+        <span className="titlebar-doc">{task ? `- [${task.title ?? task.id}]` : ""}</span>
+        <label className="titlebar-demo" title="Demo mode: never call the AI. Stored circuits are used and results are checked offline.">
+          <input type="checkbox" checked={demoMode} onChange={(e) => changeDemoMode(e.target.checked)} /> Demo mode
+        </label>
+      </div>
       <header className="app-header">
         <div className="brand">
           <svg className="brand-mark" viewBox="0 0 32 32" aria-hidden>
@@ -271,24 +505,50 @@ export function CircuitPage() {
             validating={phase === "analyzing"}
             hinting={phase === "feedback" && aiMode === "hint"}
             canValidate={!!task}
+            powered={powered}
+            onTogglePower={() => setPowered((p) => !p)}
+            hasSequential={hasSequential(state)}
+            onLoadDemo={loadDemo}
+            canLoadDemo={!!taskId && !isCustom && catalog.some((e) => e.task_id === taskId)}
+            demoLoading={demoLoading}
+            demoMode={demoMode}
+            hasClock={clockIds.length > 0}
+            clocksRunning={clocksRunning}
+            onToggleClocks={toggleClocks}
           />
-          <Inspector state={state} selection={selection} dispatch={dispatch} onClear={() => setSelection(null)} />
-          <CircuitEditor
-            state={state}
-            dispatch={dispatch}
-            signals={signals}
-            selection={selection}
-            onSelect={(s) => { setSelection(s); setFocusIds(new Set()); }}
-            errorIds={errorIds}
-            focusIds={focusIds}
-          />
+          {demo && demo.key === currentKey && (
+            <div className="demo-tag" role="status">
+              {demo.source === "ai"
+                ? "AI-generated circuit, checked against the exercise"
+                : demo.source === "fallback"
+                  ? "Stored circuit (the AI could not finish)"
+                  : "Stored reference circuit"}
+              {demo.title ? ` for "${demo.title}"` : ""}. Edit it to make it your own.
+            </div>
+          )}
+          <div className="editor-body">
+            <PartsBin dispatch={dispatch} />
+            <div className="editor-main">
+              <Inspector state={state} selection={selection} dispatch={dispatch} onClear={() => setSelection(null)} running={running} onToggleRun={toggleRun} />
+              <CircuitEditor
+                state={state}
+                dispatch={dispatch}
+                signals={signals}
+                selection={selection}
+                onSelect={(s) => { setSelection(s); setFocusIds(new Set()); }}
+                errorIds={errorIds}
+                focusIds={focusIds}
+                running={running}
+              />
+            </div>
+          </div>
         </section>
 
         <aside className="side-pane">
           <div className="tabs" role="tablist">
-            {(["target", "results", "json"] as Tab[]).map((t) => (
+            {(["target", "results", "ai", "json"] as Tab[]).map((t) => (
               <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? "active" : ""} onClick={() => setTab(t)}>
-                {t === "target" ? "Target" : t === "results" ? "Validation" : "Circuit JSON"}
+                {t === "target" ? "Target" : t === "results" ? "Validation" : t === "ai" ? "AI build" : "Circuit JSON"}
               </button>
             ))}
           </div>
@@ -300,7 +560,7 @@ export function CircuitPage() {
                 {exercise && (
                   <>
                     <p>This exercise's target is fixed. To validate against your own function, switch to <b>Custom target</b>.</p>
-                    <KMapPanel target={target} version={String(taskId)} />
+                    {!sequential && <KMapPanel target={target} version={String(taskId)} />}
                     <button
                       type="button"
                       onClick={() => {
@@ -328,6 +588,23 @@ export function CircuitPage() {
                 kmapTarget={target}
                 circuit={normalized}
                 circuitVersion={`${taskId}|${JSON.stringify(task)}|${currentKey}`}
+                sequential={sequential}
+              />
+            )}
+            {tab === "ai" && (
+              <AiBuildPanel
+                busy={building}
+                demoMode={demoMode}
+                result={buildResult}
+                error={buildError}
+                targetLabel={describeTarget(task)}
+                intent={buildIntent}
+                onIntent={setBuildIntent}
+                hasTarget={!!task}
+                hasCircuit={state.components.length > 0}
+                onGenerate={buildWithAi}
+                catalog={catalog}
+                onPick={pickStored}
               />
             )}
             {tab === "json" && (

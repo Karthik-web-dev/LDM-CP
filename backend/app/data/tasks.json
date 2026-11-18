@@ -4,24 +4,40 @@
     "title": "Build an AND circuit",
     "description": "Create a circuit whose output Y is 1 only when A and B are both 1.",
     "expected_expression": "A AND B",
-    "inputs": ["A", "B"],
-    "outputs": ["Y"]
+    "inputs": [
+      "A",
+      "B"
+    ],
+    "outputs": [
+      "Y"
+    ]
   },
   {
     "id": "and_or_001",
     "title": "AND into OR",
     "description": "Build Y = (A AND B) OR C.",
     "expected_expression": "(A AND B) OR C",
-    "inputs": ["A", "B", "C"],
-    "outputs": ["Y"]
+    "inputs": [
+      "A",
+      "B",
+      "C"
+    ],
+    "outputs": [
+      "Y"
+    ]
   },
   {
     "id": "nand_from_basics",
     "title": "NAND from AND and NOT",
     "description": "Build a NAND function using only AND and NOT gates: Y is 0 only when A and B are both 1.",
     "expected_expression": "NOT (A AND B)",
-    "inputs": ["A", "B"],
-    "outputs": ["Y"],
+    "inputs": [
+      "A",
+      "B"
+    ],
+    "outputs": [
+      "Y"
+    ],
     "hint": "Invert the output of an AND gate."
   },
   {
@@ -29,8 +45,13 @@
     "title": "XOR from AND, OR, NOT",
     "description": "Build Y = A XOR B (1 when exactly one input is 1) using AND, OR, and NOT gates.",
     "expected_expression": "A XOR B",
-    "inputs": ["A", "B"],
-    "outputs": ["Y"],
+    "inputs": [
+      "A",
+      "B"
+    ],
+    "outputs": [
+      "Y"
+    ],
     "hint": "A XOR B = (A AND NOT B) OR (NOT A AND B)."
   },
   {
@@ -38,31 +59,768 @@
     "title": "Majority of three",
     "description": "Y is 1 when at least two of A, B, C are 1.",
     "expected_expression": "(A AND B) OR (A AND C) OR (B AND C)",
-    "inputs": ["A", "B", "C"],
-    "outputs": ["Y"]
+    "inputs": [
+      "A",
+      "B",
+      "C"
+    ],
+    "outputs": [
+      "Y"
+    ]
   },
   {
     "id": "mux_2to1",
     "title": "2-to-1 multiplexer",
     "description": "Y equals A when S is 0, and equals B when S is 1.",
     "expected_expression": "(A AND NOT S) OR (B AND S)",
-    "inputs": ["S", "A", "B"],
-    "outputs": ["Y"]
+    "inputs": [
+      "S",
+      "A",
+      "B"
+    ],
+    "outputs": [
+      "Y"
+    ]
   },
   {
     "id": "half_adder",
     "title": "Half adder",
     "description": "Add two bits A and B. S is the sum bit and C is the carry bit.",
-    "expected_outputs": {"S": "A XOR B", "C": "A AND B"},
-    "inputs": ["A", "B"],
-    "outputs": ["S", "C"]
+    "expected_outputs": {
+      "S": "A XOR B",
+      "C": "A AND B"
+    },
+    "inputs": [
+      "A",
+      "B"
+    ],
+    "outputs": [
+      "S",
+      "C"
+    ]
   },
   {
     "id": "full_adder",
     "title": "Full adder",
     "description": "Add bits A, B and carry-in Cin. S is the sum bit and Cout the carry-out.",
-    "expected_outputs": {"S": "A XOR B XOR Cin", "Cout": "(A AND B) OR (Cin AND (A XOR B))"},
-    "inputs": ["A", "B", "Cin"],
-    "outputs": ["S", "Cout"]
+    "expected_outputs": {
+      "S": "A XOR B XOR Cin",
+      "Cout": "(A AND B) OR (Cin AND (A XOR B))"
+    },
+    "inputs": [
+      "A",
+      "B",
+      "Cin"
+    ],
+    "outputs": [
+      "S",
+      "Cout"
+    ]
+  },
+  {
+    "id": "async_up_counter_2bit",
+    "title": "Asynchronous 2-bit up counter (7476)",
+    "description": "Build a ripple counter with a 7476 dual JK flip-flop: the first flip-flop is clocked by CLK, the second by the output of the first. After each clock pulse Q1 Q0 must read 01, 10, 11, 00, 01.",
+    "inputs": [
+      "CLK"
+    ],
+    "outputs": [
+      "Q1",
+      "Q0"
+    ],
+    "hint": "Tie J, K, /PRE and /CLR of both flip-flops to VCC so each one toggles. The 7476 triggers on the falling edge, so clock the second flip-flop from the first one's Q.",
+    "sequence": {
+      "clock": "CLK",
+      "steps": [
+        {
+          "outputs": {
+            "Q1": 0,
+            "Q0": 1
+          }
+        },
+        {
+          "outputs": {
+            "Q1": 1,
+            "Q0": 0
+          }
+        },
+        {
+          "outputs": {
+            "Q1": 1,
+            "Q0": 1
+          }
+        },
+        {
+          "outputs": {
+            "Q1": 0,
+            "Q0": 0
+          }
+        },
+        {
+          "outputs": {
+            "Q1": 0,
+            "Q0": 1
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "async_down_counter_2bit",
+    "title": "Asynchronous 2-bit down counter (7476)",
+    "description": "Build a ripple down counter with a 7476. Starting from 00, Q1 Q0 must read 11, 10, 01, 00, 11 after the clock pulses.",
+    "inputs": [
+      "CLK"
+    ],
+    "outputs": [
+      "Q1",
+      "Q0"
+    ],
+    "hint": "Same as the up counter, but clock the second flip-flop from the first one's Q-bar (the inverted output).",
+    "sequence": {
+      "clock": "CLK",
+      "steps": [
+        {
+          "outputs": {
+            "Q1": 1,
+            "Q0": 1
+          }
+        },
+        {
+          "outputs": {
+            "Q1": 1,
+            "Q0": 0
+          }
+        },
+        {
+          "outputs": {
+            "Q1": 0,
+            "Q0": 1
+          }
+        },
+        {
+          "outputs": {
+            "Q1": 0,
+            "Q0": 0
+          }
+        },
+        {
+          "outputs": {
+            "Q1": 1,
+            "Q0": 1
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "sync_updown_counter_2bit",
+    "title": "Synchronous 2-bit up/down counter (7476)",
+    "description": "Build a synchronous counter with a 7476 where both flip-flops share CLK. M = 0 counts up and M = 1 counts down. From 00: with M = 0 it reads 01, 10, 11, 00; then with M = 1 it reads 11, 10, 01, 00.",
+    "inputs": [
+      "CLK",
+      "M"
+    ],
+    "outputs": [
+      "Q1",
+      "Q0"
+    ],
+    "hint": "The low bit toggles every pulse (J = K = 1). The high bit toggles when Q0 XOR M is 1.",
+    "sequence": {
+      "clock": "CLK",
+      "steps": [
+        {
+          "inputs": {
+            "M": 0
+          },
+          "outputs": {
+            "Q1": 0,
+            "Q0": 1
+          }
+        },
+        {
+          "inputs": {
+            "M": 0
+          },
+          "outputs": {
+            "Q1": 1,
+            "Q0": 0
+          }
+        },
+        {
+          "inputs": {
+            "M": 0
+          },
+          "outputs": {
+            "Q1": 1,
+            "Q0": 1
+          }
+        },
+        {
+          "inputs": {
+            "M": 0
+          },
+          "outputs": {
+            "Q1": 0,
+            "Q0": 0
+          }
+        },
+        {
+          "inputs": {
+            "M": 1
+          },
+          "outputs": {
+            "Q1": 1,
+            "Q0": 1
+          }
+        },
+        {
+          "inputs": {
+            "M": 1
+          },
+          "outputs": {
+            "Q1": 1,
+            "Q0": 0
+          }
+        },
+        {
+          "inputs": {
+            "M": 1
+          },
+          "outputs": {
+            "Q1": 0,
+            "Q0": 1
+          }
+        },
+        {
+          "inputs": {
+            "M": 1
+          },
+          "outputs": {
+            "Q1": 0,
+            "Q0": 0
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "shift_register_4bit",
+    "title": "4-bit shift register (7474)",
+    "description": "Build a serial-in shift register from two 7474 dual D flip-flops. DIN enters Q0 and each pulse moves the bits one place towards Q3. Applying DIN = 1, 0, 1, 1 on four pulses leaves Q3 Q2 Q1 Q0 = 1011.",
+    "inputs": [
+      "CLK",
+      "DIN"
+    ],
+    "outputs": [
+      "Q3",
+      "Q2",
+      "Q1",
+      "Q0"
+    ],
+    "hint": "Chain the flip-flops: DIN to the first D, each Q to the next D, all clocks together. Tie /PRE and /CLR to VCC.",
+    "sequence": {
+      "clock": "CLK",
+      "steps": [
+        {
+          "inputs": {
+            "DIN": 1
+          },
+          "outputs": {
+            "Q3": 0,
+            "Q2": 0,
+            "Q1": 0,
+            "Q0": 1
+          }
+        },
+        {
+          "inputs": {
+            "DIN": 0
+          },
+          "outputs": {
+            "Q3": 0,
+            "Q2": 0,
+            "Q1": 1,
+            "Q0": 0
+          }
+        },
+        {
+          "inputs": {
+            "DIN": 1
+          },
+          "outputs": {
+            "Q3": 0,
+            "Q2": 1,
+            "Q1": 0,
+            "Q0": 1
+          }
+        },
+        {
+          "inputs": {
+            "DIN": 1
+          },
+          "outputs": {
+            "Q3": 1,
+            "Q2": 0,
+            "Q1": 1,
+            "Q0": 1
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "gates_verification",
+    "title": "Verification of logic gates",
+    "description": "Verify the basic gates: build AND, OR, NAND, NOR, XOR and XNOR of the two inputs A and B, each on its own output.",
+    "expected_outputs": {
+      "Yand": "A AND B",
+      "Yor": "A OR B",
+      "Ynand": "A NAND B",
+      "Ynor": "A NOR B",
+      "Yxor": "A XOR B",
+      "Yxnor": "A XNOR B"
+    },
+    "inputs": [
+      "A",
+      "B"
+    ],
+    "outputs": [
+      "Yand",
+      "Yor",
+      "Ynand",
+      "Ynor",
+      "Yxor",
+      "Yxnor"
+    ]
+  },
+  {
+    "id": "boolean_simplification",
+    "title": "Simplify with Boolean algebra",
+    "description": "F = A'B'C + A'BC + AB'C + ABC' + ABC. Simplify the equation using Boolean algebra, then build the simplified circuit.",
+    "expected_expression": "C OR (A AND B)",
+    "inputs": [
+      "A",
+      "B",
+      "C"
+    ],
+    "outputs": [
+      "F"
+    ],
+    "hint": "A'B'C + A'BC + AB'C + ABC = C. The remaining term ABC' combines with ABC to give AB."
+  },
+  {
+    "id": "excess3_to_bcd",
+    "title": "Excess-3 to BCD code converter",
+    "description": "Convert a 4-bit excess-3 code (E3 E2 E1 E0, valid for digits 3 to 12) to BCD (B3 B2 B1 B0). Use a K-map: the unused codes are don't-cares.",
+    "expected_truth_table": {
+      "B3": [
+        "X",
+        "X",
+        "X",
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        "X",
+        "X",
+        "X"
+      ],
+      "B2": [
+        "X",
+        "X",
+        "X",
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        "X",
+        "X",
+        "X"
+      ],
+      "B1": [
+        "X",
+        "X",
+        "X",
+        0,
+        0,
+        1,
+        1,
+        0,
+        0,
+        1,
+        1,
+        0,
+        0,
+        "X",
+        "X",
+        "X"
+      ],
+      "B0": [
+        "X",
+        "X",
+        "X",
+        0,
+        1,
+        0,
+        1,
+        0,
+        1,
+        0,
+        1,
+        0,
+        1,
+        "X",
+        "X",
+        "X"
+      ]
+    },
+    "inputs": [
+      "E3",
+      "E2",
+      "E1",
+      "E0"
+    ],
+    "outputs": [
+      "B3",
+      "B2",
+      "B1",
+      "B0"
+    ],
+    "hint": "Excess-3 = BCD + 3, so BCD = excess-3 - 3. Fill the K-map for each output, treating 0000-0010 and 1101-1111 as don't-cares."
+  },
+  {
+    "id": "bcd_to_excess3",
+    "title": "BCD to Excess-3 code converter",
+    "description": "Convert a BCD digit (D3 D2 D1 D0, valid for 0 to 9) to excess-3 (X3 X2 X1 X0). The codes 1010-1111 are don't-cares.",
+    "expected_truth_table": {
+      "X3": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        1,
+        1,
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X"
+      ],
+      "X2": [
+        0,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X"
+      ],
+      "X1": [
+        1,
+        0,
+        0,
+        1,
+        1,
+        0,
+        0,
+        1,
+        1,
+        0,
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X"
+      ],
+      "X0": [
+        1,
+        0,
+        1,
+        0,
+        1,
+        0,
+        1,
+        0,
+        1,
+        0,
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X"
+      ]
+    },
+    "inputs": [
+      "D3",
+      "D2",
+      "D1",
+      "D0"
+    ],
+    "outputs": [
+      "X3",
+      "X2",
+      "X1",
+      "X0"
+    ],
+    "hint": "Excess-3 = BCD + 3. Use a K-map per output and use the don't-cares to make groups larger."
+  },
+  {
+    "id": "full_adder_mux_74153",
+    "title": "Full adder with 8:1 multiplexers (74153)",
+    "description": "Implement a full adder (S, Cout) using 8:1 multiplexers, each built from the two 4:1 halves of a 74153. Use A as the third select bit by enabling one half at a time.",
+    "expected_outputs": {
+      "S": "A XOR B XOR Cin",
+      "Cout": "(A AND B) OR (Cin AND (A XOR B))"
+    },
+    "inputs": [
+      "A",
+      "B",
+      "Cin"
+    ],
+    "outputs": [
+      "S",
+      "Cout"
+    ],
+    "hint": "Wire B and Cin to the shared select pins. Drive /1G with A and /2G with NOT A, tie each data input to VCC or GND from the truth table, and OR the two outputs 1Y and 2Y."
+  },
+  {
+    "id": "comparator_2bit_74138",
+    "title": "2-bit comparator with 74138 decoders",
+    "description": "Compare A = A1A0 with B = B1B0. Agt is 1 when A > B, Aeq when A = B, and Alt when A < B. Build it with 3:8 decoders (74138); use the enable pins to take the fourth input.",
+    "expected_truth_table": {
+      "Agt": [
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        1,
+        0,
+        0,
+        1,
+        1,
+        1,
+        0
+      ],
+      "Aeq": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+      ],
+      "Alt": [
+        0,
+        1,
+        1,
+        1,
+        0,
+        0,
+        1,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "inputs": [
+      "A1",
+      "A0",
+      "B1",
+      "B0"
+    ],
+    "outputs": [
+      "Agt",
+      "Aeq",
+      "Alt"
+    ],
+    "hint": "Two 74138s make a 4:16 decoder: enable one when A1 = 0 and the other when A1 = 1. The outputs are active low, so combine the wanted minterms with a NAND gate."
+  },
+  {
+    "id": "sr_latch_nand",
+    "title": "SR latch with NAND gates",
+    "description": "Build a set-reset latch from two cross-coupled NAND gates. S and R are active low: S = 0 sets Q to 1, R = 0 resets Q to 0, and S = R = 1 holds the value. Q and Qn are the two outputs.",
+    "inputs": [
+      "S",
+      "R"
+    ],
+    "outputs": [
+      "Q",
+      "Qn"
+    ],
+    "hint": "Q = NAND(S, Qn) and Qn = NAND(R, Q): feed the output of each gate back into the second input of the other.",
+    "sequence": {
+      "steps": [
+        {
+          "inputs": {
+            "S": 0,
+            "R": 1
+          },
+          "outputs": {
+            "Q": 1,
+            "Qn": 0
+          }
+        },
+        {
+          "inputs": {
+            "S": 1,
+            "R": 1
+          },
+          "outputs": {
+            "Q": 1,
+            "Qn": 0
+          }
+        },
+        {
+          "inputs": {
+            "S": 1,
+            "R": 0
+          },
+          "outputs": {
+            "Q": 0,
+            "Qn": 1
+          }
+        },
+        {
+          "inputs": {
+            "S": 1,
+            "R": 1
+          },
+          "outputs": {
+            "Q": 0,
+            "Qn": 1
+          }
+        },
+        {
+          "inputs": {
+            "S": 0,
+            "R": 1
+          },
+          "outputs": {
+            "Q": 1,
+            "Qn": 0
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "sr_flipflop_nand",
+    "title": "Clocked SR flip-flop with NAND gates",
+    "description": "Build a clocked SR flip-flop from four NAND gates: two gates that pass S and R only while CLK is 1, feeding a cross-coupled NAND latch. S = 1 sets Q, R = 1 resets Q, and S = R = 0 holds. Each step sets S and R, then gives one clock pulse.",
+    "inputs": [
+      "S",
+      "R",
+      "CLK"
+    ],
+    "outputs": [
+      "Q",
+      "Qn"
+    ],
+    "hint": "NAND(S, CLK) and NAND(R, CLK) feed a latch of two cross-coupled NAND gates: Q = NAND(first, Qn) and Qn = NAND(second, Q).",
+    "sequence": {
+      "clock": "CLK",
+      "steps": [
+        {
+          "inputs": {
+            "S": 0,
+            "R": 1
+          },
+          "outputs": {
+            "Q": 0,
+            "Qn": 1
+          }
+        },
+        {
+          "inputs": {
+            "S": 1,
+            "R": 0
+          },
+          "outputs": {
+            "Q": 1,
+            "Qn": 0
+          }
+        },
+        {
+          "inputs": {
+            "S": 0,
+            "R": 0
+          },
+          "outputs": {
+            "Q": 1,
+            "Qn": 0
+          }
+        },
+        {
+          "inputs": {
+            "S": 0,
+            "R": 1
+          },
+          "outputs": {
+            "Q": 0,
+            "Qn": 1
+          }
+        },
+        {
+          "inputs": {
+            "S": 0,
+            "R": 0
+          },
+          "outputs": {
+            "Q": 0,
+            "Qn": 1
+          }
+        }
+      ]
+    }
   }
 ]

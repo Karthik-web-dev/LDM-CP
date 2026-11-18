@@ -1,46 +1,47 @@
 /* ---- Design tokens ----------------------------------------------------------------------
-   One accent (teal) for interaction, amber only for "signal is 1", and status colours used
-   sparingly. Everything else is neutral. */
+   Electronics-Workbench-style theme: classic grey window chrome with bevelled controls, a navy
+   title bar, a white workspace, black schematic symbols and red "signal is 1" lamps and wires.
+   The app is light only, like the original. */
 :root {
-  --sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --mono: "JetBrains Mono", ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, monospace;
-  --radius: 10px;
-  --radius-sm: 6px;
-  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
-  --shadow-md: 0 4px 16px rgba(16, 24, 40, 0.08);
+  --sans: "Segoe UI", Tahoma, "Helvetica Neue", Arial, sans-serif;
+  --mono: "Consolas", "Lucida Console", ui-monospace, "Cascadia Code", monospace;
+  --radius: 0;
+  --radius-sm: 0;
+  --shadow-sm: none;
+  --shadow-md: none;
 
-  --bg: #f4f5f7;
-  --surface: #ffffff;
-  --surface-2: #f3f4f6;
-  --surface-3: #e9ecf0;
-  --canvas: #fcfcfd;
-  --grid: #dde1e6;
-  --border: #e3e6ea;
-  --border-strong: #cdd2d9;
-  --text: #16191d;
-  --text-muted: #5b6470;
-  --text-faint: #8d95a0;
+  --bg: #bdbab2;
+  --surface: #d4d0c8;
+  --surface-2: #e6e3dc;
+  --surface-3: #b4b0a6;
+  --canvas: #ffffff;
+  --grid: #9aa3b8;
+  --border: #808080;
+  --border-strong: #404040;
+  --text: #000000;
+  --text-muted: #3a3a3a;
+  --text-faint: #6a6a6a;
 
-  --accent: #0f766e;
-  --accent-hover: #0b5f58;
-  --accent-soft: #e5f2f0;
+  --accent: #0a246a;
+  --accent-hover: #1c3c9c;
+  --accent-soft: #cfd6ee;
   --accent-text: #ffffff;
 
-  --component-stroke: #2c323a;
+  --component-stroke: #000000;
   --component-fill: #ffffff;
-  --wire-off: #a3abb5;
-  --wire-unknown: #cfd4da;
-  --signal-on: #d97706;
-  --signal-glow: rgba(217, 119, 6, 0.35);
+  --wire-off: #14146e;
+  --wire-unknown: #9a9ab0;
+  --signal-on: #d80000;
+  --signal-glow: rgba(216, 0, 0, 0.25);
 
-  --ok: #15803d;
-  --ok-bg: #ecf6ef;
-  --danger: #b42318;
-  --danger-bg: #fcefed;
-  --warn: #a15c07;
-  --warn-bg: #fcf5e6;
-  --ai: #4c5bb5;
-  --ai-bg: #eef0f9;
+  --ok: #0a6b2a;
+  --ok-bg: #dcefe1;
+  --danger: #b00020;
+  --danger-bg: #f6dcdf;
+  --warn: #7a4a00;
+  --warn-bg: #f6ecc8;
+  --ai: #2a3a9a;
+  --ai-bg: #dde2f5;
 
   /* K-map group colours (outline, fill) */
   --group-0: #0f766e; --group-0-bg: rgba(15, 118, 110, 0.10);
@@ -51,55 +52,6 @@
   --group-5: #65a30d; --group-5-bg: rgba(101, 163, 13, 0.10);
 
   color-scheme: light;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.45);
-
-    --bg: #0f1114;
-    --surface: #16191d;
-    --surface-2: #1c2025;
-    --surface-3: #242930;
-    --canvas: #121417;
-    --grid: #262a31;
-    --border: #262b32;
-    --border-strong: #363c45;
-    --text: #e7e9ec;
-    --text-muted: #9aa2ac;
-    --text-faint: #6b737d;
-
-    --accent: #3fb3a5;
-    --accent-hover: #5cc4b7;
-    --accent-soft: #15302d;
-    --accent-text: #061a18;
-
-    --component-stroke: #c6ccd4;
-    --component-fill: #1c2025;
-    --wire-off: #58606a;
-    --wire-unknown: #3a4048;
-    --signal-on: #f5a524;
-    --signal-glow: rgba(245, 165, 36, 0.4);
-
-    --ok: #4cc27c;
-    --ok-bg: #14261b;
-    --danger: #f0776c;
-    --danger-bg: #2d1819;
-    --warn: #e6a846;
-    --warn-bg: #2b2215;
-    --ai: #97a2eb;
-    --ai-bg: #1d2135;
-
-    --group-0: #3fb3a5; --group-0-bg: rgba(63, 179, 165, 0.16);
-    --group-1: #f5a524; --group-1-bg: rgba(245, 165, 36, 0.16);
-    --group-2: #97a2eb; --group-2-bg: rgba(151, 162, 235, 0.16);
-    --group-3: #f06a8a; --group-3-bg: rgba(240, 106, 138, 0.16);
-    --group-4: #4cb8f0; --group-4-bg: rgba(76, 184, 240, 0.16);
-    --group-5: #9ad14b; --group-5-bg: rgba(154, 209, 75, 0.16);
-
-    color-scheme: dark;
-  }
 }
 
 /* ---- Base ---------------------------------------------------------------------------------- */
@@ -261,3 +213,146 @@ input:focus, select:focus { outline: none; border-color: var(--accent); box-shad
   .side-pane { min-height: 380px; }
   .app-header { padding: 10px 12px; }
 }
+
+
+/* ---- Electronics Workbench look ------------------------------------------------------------ */
+body { font-size: 13px; }
+
+/* Raised (bevelled) controls, like classic Windows buttons. */
+button, select, input { border-radius: 0; }
+button {
+  height: 28px;
+  background: var(--surface);
+  border: 2px solid;
+  border-color: #ffffff #404040 #404040 #ffffff;
+  box-shadow: inset -1px -1px 0 #808080, inset 1px 1px 0 #e6e3dc;
+  font-weight: 500;
+}
+button:hover:not(:disabled) { background: var(--surface-2); }
+button:active:not(:disabled) {
+  border-color: #404040 #ffffff #ffffff #404040;
+  box-shadow: inset 1px 1px 0 #808080;
+}
+button.primary, .btn-primary { background: var(--accent); border-color: #5a6fb8 #050f30 #050f30 #5a6fb8; box-shadow: none; }
+button.ghost, .btn-ghost { background: var(--surface); border-color: #ffffff #404040 #404040 #ffffff; box-shadow: inset -1px -1px 0 #808080; color: var(--text); }
+button.link { border: none; box-shadow: none; background: none; }
+button.link:active:not(:disabled) { box-shadow: none; }
+select, input {
+  border: 2px solid;
+  border-color: #808080 #ffffff #ffffff #808080;
+  background: #ffffff;
+  box-shadow: inset 1px 1px 0 #404040;
+}
+input:focus, select:focus { box-shadow: inset 1px 1px 0 #404040, 0 0 0 1px var(--accent); }
+
+.segmented { border-radius: 0; background: var(--surface-3); }
+.segmented button { border-radius: 0; box-shadow: none; border: none; }
+.segmented button.active { background: #fff; box-shadow: none; }
+
+/* Title bar, then the grey menu strip that holds the exercise picker. */
+.titlebar {
+  display: flex; align-items: center; gap: 8px;
+  height: 26px; padding: 0 10px;
+  background: linear-gradient(90deg, #0a246a 0%, #3a6ea5 100%);
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+.titlebar-doc { font-weight: 400; opacity: 0.9; }
+.app-header { background: var(--surface); border-bottom: 2px solid #808080; box-shadow: 0 1px 0 #ffffff; padding: 6px 12px; }
+.brand-mark { display: none; }
+.brand-name { font-size: 13px; }
+.brand-sub { display: none; }
+
+.workspace { padding: 8px 10px; gap: 8px; background: var(--bg); }
+.editor-pane { gap: 6px; }
+
+/* Sunken panels. */
+.side-pane, .editor-scroll, .inspector, .toolbar, .parts-bin {
+  border: 2px solid;
+  border-color: #808080 #ffffff #ffffff #808080;
+  border-radius: 0;
+  box-shadow: none;
+}
+.side-pane { background: var(--surface); }
+.tabs { background: var(--surface); padding: 4px 6px 0; gap: 2px; border-bottom: 2px solid #808080; }
+.tabs button {
+  height: 26px; margin-bottom: -2px;
+  border: 2px solid; border-color: #ffffff #404040 transparent #ffffff;
+  box-shadow: none; background: var(--surface-3);
+}
+.tabs button.active { background: var(--surface); height: 28px; }
+.side-content { background: var(--surface); }
+
+.editor-body { flex: 1; min-height: 0; display: flex; gap: 6px; }
+.editor-main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
+.editor-main .editor-scroll { flex: 1; }
+
+/* Action bar. */
+.toolbar { gap: 6px; padding: 4px 6px; background: var(--surface); border-color: #ffffff #808080 #808080 #ffffff; }
+.tool-divider { width: 2px; margin: 2px 4px; background: #808080; box-shadow: 1px 0 0 #fff; }
+.toolbar .power-switch { margin-left: auto; }
+
+/* The I/O power switch. */
+.power-switch {
+  position: relative; width: 62px; height: 28px; padding: 0 8px;
+  justify-content: space-between;
+  font-family: var(--mono); font-weight: 700; font-size: 12px; color: #404040;
+}
+.power-knob {
+  position: absolute; top: 2px; left: 2px; width: 28px; height: 20px;
+  background: var(--surface); border: 2px solid; border-color: #ffffff #404040 #404040 #ffffff;
+  transition: left 0.1s;
+}
+.power-switch.on .power-knob { left: 26px; }
+.power-switch.on .power-i { color: #d80000; }
+.power-switch { background: #8f8c84; }
+
+/* Inspector strip. */
+.inspector { background: var(--surface); }
+.inspector > code { background: #ffffff; border: 1px solid #808080; border-radius: 0; }
+
+/* Canvas. */
+.editor-scroll { background: var(--canvas); }
+.component-id { fill: #606060; }
+
+/* Banner shown while a stored demo circuit is on the workspace. */
+.demo-tag {
+  padding: 3px 8px; font-size: 12px; font-weight: 600;
+  background: #ffffe1; color: #000; border: 1px solid #000;
+}
+
+/* Demo mode switch in the title bar. */
+.titlebar-demo { margin-left: auto; display: flex; align-items: center; gap: 6px; font-weight: 600; cursor: pointer; }
+.titlebar-demo input { height: auto; width: 14px; box-shadow: none; }
+
+/* AI build tab. */
+.ai-build { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.ai-build p { margin: 0; }
+.ai-build .demo-note { padding: 4px 8px; background: #ffffe1; border: 1px solid #000; }
+.ai-build-prompt { display: flex; flex-direction: column; gap: 4px; width: 100%; font-weight: 600; }
+.ai-build-prompt textarea {
+  font: inherit; padding: 4px 6px; resize: vertical;
+  border: 2px solid; border-color: #808080 #fff #fff #808080; box-shadow: inset 1px 1px 0 #404040;
+}
+.ai-build-result { width: 100%; padding: 8px 10px; border: 2px solid; background: var(--surface-2); }
+.ai-build-result.ok { border-color: var(--ok); }
+.ai-build-result.bad { border-color: var(--danger); }
+.ai-build-source { font-weight: 700; }
+
+/* Stored circuits listed in the AI build tab (demo mode). */
+.demo-catalog { width: 100%; }
+.demo-catalog-title { font-weight: 700; margin-bottom: 4px; }
+.demo-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.demo-chip { height: auto; min-height: 26px; padding: 2px 8px; font-size: 12px; text-align: left; }
+.demo-chip-style {
+  margin-left: 6px; padding: 0 4px; font-family: var(--mono); font-size: 10px; font-weight: 700;
+  background: #fff; border: 1px solid #808080;
+}
+
+/* AI build: the three modes. */
+.ai-modes { align-self: stretch; }
+.ai-modes button { flex: 1; padding: 0 6px; }
+.ai-mode-help { margin: 0; font-size: 12.5px; }
+.ai-spec { margin: 4px 0 0; }
+.ai-spec code { font-family: var(--mono); background: #fff; border: 1px solid #808080; padding: 0 4px; }

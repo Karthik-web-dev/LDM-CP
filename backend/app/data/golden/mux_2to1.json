@@ -1,0 +1,123 @@
+{
+  "task_id": "mux_2to1",
+  "title": "2-to-1 multiplexer",
+  "source": "reference",
+  "circuit": {
+    "version": 1,
+    "inputs": [
+      {
+        "id": "input_1",
+        "label": "S",
+        "position": {
+          "x": 40,
+          "y": 40
+        }
+      },
+      {
+        "id": "input_2",
+        "label": "A",
+        "position": {
+          "x": 40,
+          "y": 100
+        }
+      },
+      {
+        "id": "input_3",
+        "label": "B",
+        "position": {
+          "x": 40,
+          "y": 160
+        }
+      }
+    ],
+    "gates": [
+      {
+        "id": "gate_1",
+        "type": "NOT",
+        "inputs": 1,
+        "position": {
+          "x": 190,
+          "y": 40
+        }
+      },
+      {
+        "id": "gate_2",
+        "type": "AND",
+        "inputs": 2,
+        "position": {
+          "x": 350,
+          "y": 40
+        }
+      },
+      {
+        "id": "gate_3",
+        "type": "AND",
+        "inputs": 2,
+        "position": {
+          "x": 190,
+          "y": 110
+        }
+      },
+      {
+        "id": "gate_4",
+        "type": "OR",
+        "inputs": 2,
+        "position": {
+          "x": 510,
+          "y": 40
+        }
+      }
+    ],
+    "outputs": [
+      {
+        "id": "output_1",
+        "label": "Y",
+        "position": {
+          "x": 670,
+          "y": 40
+        }
+      }
+    ],
+    "connections": [
+      {
+        "from": "input_1",
+        "to": "gate_1",
+        "input_index": 0
+      },
+      {
+        "from": "input_2",
+        "to": "gate_2",
+        "input_index": 0
+      },
+      {
+        "from": "gate_1",
+        "to": "gate_2",
+        "input_index": 1
+      },
+      {
+        "from": "input_3",
+        "to": "gate_3",
+        "input_index": 0
+      },
+      {
+        "from": "input_1",
+        "to": "gate_3",
+        "input_index": 1
+      },
+      {
+        "from": "gate_2",
+        "to": "gate_4",
+        "input_index": 0
+      },
+      {
+        "from": "gate_3",
+        "to": "gate_4",
+        "input_index": 1
+      },
+      {
+        "from": "gate_4",
+        "to": "output_1"
+      }
+    ]
+  }
+}

@@ -136,6 +136,60 @@ Computes Karnaugh maps without using the AI, for functions of 1 to 4 inputs. The
 
 Rows and columns follow Gray-code order. `value` is `null` for don't-cares. `groups` are the implicants chosen by the Quine-McCluskey simplifier, so they always agree with `minimal_sop`.
 
+## `POST /api/v1/generate`
+
+Builds a circuit with the AI (or opens a stored one). Every AI circuit is checked by the exact analysis before it is returned; if the check fails, the AI is told the exact problems and retries (up to `GENERATE_ATTEMPTS`, within `GENERATE_TIMEOUT_SECONDS`).
+
+```json
+{
+  "intent": "target",
+  "task_id": "half_adder",
+  "prompt": "use only NAND gates",
+  "mode": "live",
+  "circuit": { "version": 1, "...": "only for intent extend" }
+}
+```
+
+| `intent` | Needs | What happens | If the AI cannot do it |
+|---|---|---|---|
+| `describe` | `prompt` (no target) | The AI states a precise `spec` of what it builds (equations, a truth table, or a step sequence) and the circuit is checked against that spec. The `spec` is returned so it can be adopted as the target. | A stored circuit is shown only if the prompt strictly names it (`source: "fallback"`), otherwise nothing. |
+| `target` (default) | `task_id` or `task` | Builds from scratch for the target. | The stored circuit for that exercise (`source: "fallback"`), if there is one. |
+| `extend` | `task_id` or `task`, and `circuit` | Improves the given circuit so it meets the target. Existing parts keep their positions; new ones are placed to the right. | Nothing is returned and the circuit is untouched. |
+
+`mode: "demo"` never calls the AI: `target` returns the stored circuit, `describe` matches the prompt to a stored circuit by text.
+
+```json
+{
+  "success": true,
+  "source": "ai",
+  "circuit": { "version": 1, "inputs": [], "gates": [], "outputs": [], "connections": [] },
+  "explanation": "XOR gives the sum and AND the carry.",
+  "attempts": 1,
+  "notice": null,
+  "model": "...",
+  "spec": null,
+  "matched_task_id": null
+}
+```
+
+`source` is `ai` (verified AI circuit), `stored` (demo mode), `fallback` (the AI failed, a stored circuit is shown) or `none`. `spec` is set for `describe`. `matched_task_id` is set when a stored circuit is shown, so the client can switch to that exercise. Errors: `422` (no prompt for `describe`, no target for `target`/`extend`, no circuit for `extend`), `404` (unknown `task_id`).
+
+## `POST /api/v1/demo/match`
+
+`{ "prompt": "half adder", "strict": false }` returns `{ "best": {...} | null, "matches": [...] }`: the stored circuit a request names, by deterministic text matching (no AI). `best` is set only when a whole stored phrase matched. With `strict: true` only distinctive circuit names count, so instructions such as "use only NAND gates" match nothing.
+
+## `GET /api/v1/demo/catalog`
+
+Every stored circuit with `task_id`, `title`, `style` (`gates` or `ic`) and the part types it uses.
+
+## `GET /api/v1/golden/{task_id}`
+
+The stored, verified circuit for an exercise (`task_id`, `title`, `source`, `circuit`). `404` if there is none.
+
+## Tasks with memory
+
+A task can define `sequence` instead of `expected_expression` / `expected_outputs` / `expected_truth_table`, for counters, shift registers and latches. `POST /validate` then returns `deterministic.sequence` (one row per step with the inputs, expected and actual outputs) instead of a truth table. See [CIRCUIT_FORMAT.md](CIRCUIT_FORMAT.md).
+
 ## `GET /api/v1/tasks`
 
 Lists built-in exercises (`backend/app/data/tasks.json`).

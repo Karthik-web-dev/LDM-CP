@@ -23,6 +23,11 @@ class AIValidator(ABC):
         """Return validated tutor feedback, or raise ``AIValidationError``."""
 
 
+    async def complete_json(self, system: str, user: str) -> str:
+        """Return the model's raw text reply to a system + user prompt (used by the circuit generator)."""
+        raise AIValidationError("disabled", "AI generation is not configured on this server.")
+
+
 class DisabledAIValidator(AIValidator):
     def __init__(self, message: str = "AI feedback is not configured on this server."):
         self.message = message
@@ -45,12 +50,24 @@ class MockAIValidator(AIValidator):
         raw_response: str | None = None,
         error: Exception | None = None,
         responder: Callable[[dict[str, Any]], LLMValidationResponse] | None = None,
+        generations: list[str] | None = None,
     ):
+        # Replies returned, in order, by complete_json (the circuit generator); then it raises.
+        self.generations = list(generations or [])
+        self.generation_prompts: list[tuple[str, str]] = []
         self.raw_response = raw_response
         self.error = error
         self.responder = responder
         self.calls: list[dict[str, Any]] = []
         self.modes: list[str] = []
+
+    async def complete_json(self, system: str, user: str) -> str:
+        self.generation_prompts.append((system, user))
+        if self.error:
+            raise self.error
+        if not self.generations:
+            raise AIValidationError("disabled", "The mock AI has no generation reply queued.")
+        return self.generations.pop(0)
 
     async def validate(self, payload: dict[str, Any], mode: str = "feedback") -> LLMValidationResponse:
         self.calls.append(payload)
@@ -95,6 +112,26 @@ class AnthropicAIValidator(AIValidator):
         self.max_tokens = settings.ai_max_tokens
         self.effort = settings.ai_effort
         self.refusal_fallback = settings.ai_refusal_fallback
+        self.generate_max_tokens = settings.generate_max_tokens
+        self.generate_timeout = settings.generate_timeout_seconds
+
+    async def complete_json(self, system: str, user: str) -> str:
+        try:
+            response = await self.client.with_options(timeout=self.generate_timeout, max_retries=0).messages.create(
+                model=self.model_name, max_tokens=self.generate_max_tokens, system=system,
+                messages=[{"role": "user", "content": user}],
+            )
+        except anthropic.APITimeoutError as exc:
+            raise AIValidationError("timeout", "The AI took too long to respond.") from exc
+        except anthropic.RateLimitError as exc:
+            raise AIValidationError("rate_limited", "The AI is receiving too many requests.") from exc
+        except (anthropic.AuthenticationError, anthropic.PermissionDeniedError) as exc:
+            raise AIValidationError("auth", "The AI is misconfigured (authentication failed).") from exc
+        except (anthropic.APIStatusError, anthropic.APIConnectionError) as exc:
+            raise AIValidationError("unavailable", "Could not reach the AI service.") from exc
+        if response.stop_reason in ("refusal", "max_tokens"):
+            raise AIValidationError("truncated", "The AI declined or its reply was cut off.")
+        return "".join(block.text for block in response.content if block.type == "text")
 
     async def validate(self, payload: dict[str, Any], mode: str = "feedback") -> LLMValidationResponse:
         request: dict[str, Any] = {
@@ -162,6 +199,47 @@ class OpenAICompatibleAIValidator(AIValidator):
         self.model_name = settings.resolved_ai_model
         self.max_tokens = settings.ai_max_tokens
         self.response_format = settings.ai_response_format
+        self.generate_max_tokens = settings.generate_max_tokens
+        self.generate_timeout = settings.generate_timeout_seconds
+
+    async def complete_json(self, system: str, user: str) -> str:
+        if not self.model_name:
+            raise AIValidationError("bad_request", "No AI model is configured. Set AI_MODEL in backend/.env.")
+        request: dict[str, Any] = {
+            "model": self.model_name,
+            "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
+        }
+        request["max_completion_tokens" if self.provider == "openai" else "max_tokens"] = self.generate_max_tokens
+        if self.response_format != "none":
+            request["response_format"] = {"type": "json_object"}
+        # Writing a circuit can take a reasoning model minutes: use the generator's own time limit, once.
+        client = self.client.with_options(timeout=self.generate_timeout, max_retries=0)
+        try:
+            try:
+                response = await client.chat.completions.create(**request)
+            except openai.BadRequestError:
+                request.pop("response_format", None)  # some models reject JSON mode; rely on the prompt
+                response = await client.chat.completions.create(**request)
+        except openai.APITimeoutError as exc:
+            raise AIValidationError("timeout", "The AI took too long to respond.") from exc
+        except openai.RateLimitError as exc:
+            raise AIValidationError("rate_limited", "The AI is receiving too many requests.") from exc
+        except (openai.AuthenticationError, openai.PermissionDeniedError) as exc:
+            raise AIValidationError("auth", "The AI is misconfigured (authentication failed). Check AI_API_KEY.") from exc
+        except openai.NotFoundError as exc:
+            raise AIValidationError("bad_request", f"The AI model '{self.model_name}' was not found. Check AI_MODEL.") from exc
+        except openai.APIStatusError as exc:
+            raise AIValidationError("billing" if exc.status_code == 402 else "unavailable", "The AI service refused or failed the request.") from exc
+        except openai.APIConnectionError as exc:
+            raise AIValidationError("unavailable", "Could not reach the AI service.") from exc
+        if not getattr(response, "choices", None):
+            raise AIValidationError("unavailable", "The AI service returned no answer.")
+        choice = response.choices[0]
+        if choice.finish_reason == "length":
+            raise AIValidationError("truncated", "The AI's reply was cut off.")
+        if not choice.message.content:
+            raise AIValidationError("malformed_response", "The AI returned an empty reply.")
+        return choice.message.content
 
     def _format_param(self, kind: str) -> dict[str, Any] | None:
         if kind == "json_schema":

@@ -31,6 +31,7 @@ class Node:
     label: str | None = None
     gate_type: str | None = None  # normalized, e.g. "AND"
     pin_count: int = 0  # number of input pins (0 for circuit inputs, 1 for outputs)
+    out_count: int = 1  # number of output pins (0 for circuit outputs)
 
 
 @dataclass(frozen=True)
@@ -38,6 +39,7 @@ class Edge:
     source: str
     target: str
     pin: int
+    source_pin: int = 0
 
 
 @dataclass
@@ -56,11 +58,16 @@ class CircuitGraph:
     rejected: list[RejectedConnection] = field(default_factory=list)
     duplicate_ids: list[str] = field(default_factory=list)
     _pin_drivers: dict[str, dict[int, list[str]]] = field(default_factory=dict)
+    _pin_sources: dict[str, dict[int, list[tuple[str, int]]]] = field(default_factory=dict)
     _successors: dict[str, list[str]] = field(default_factory=dict)
 
     def pin_drivers(self, node_id: str) -> dict[int, list[str]]:
         """Map of pin index -> ids of nodes driving that pin."""
         return self._pin_drivers.get(node_id, {})
+
+    def pin_sources(self, node_id: str) -> dict[int, list[tuple[str, int]]]:
+        """Map of pin index -> (driver id, driver output pin) pairs."""
+        return self._pin_sources.get(node_id, {})
 
     def successors(self, node_id: str) -> list[str]:
         return self._successors.get(node_id, [])
@@ -118,14 +125,16 @@ def build_graph(circuit: Circuit) -> CircuitGraph:
                 order=order,
                 gate_type=normalize_gate_type(gate.type),
                 pin_count=pin_count,
+                out_count=definition.n_outputs if definition is not None else 1,
             )
         )
         order += 1
     for out in circuit.outputs:
-        add(Node(id=out.id, kind=NodeKind.OUTPUT, order=order, label=out.label, pin_count=1))
+        add(Node(id=out.id, kind=NodeKind.OUTPUT, order=order, label=out.label, pin_count=1, out_count=0))
         order += 1
 
     pin_drivers: dict[str, dict[int, list[str]]] = defaultdict(lambda: defaultdict(list))
+    pin_sources: dict[str, dict[int, list[tuple[str, int]]]] = defaultdict(lambda: defaultdict(list))
     successors: dict[str, list[str]] = defaultdict(list)
 
     for index, conn in enumerate(circuit.connections):
@@ -158,11 +167,18 @@ def build_graph(circuit: Circuit) -> CircuitGraph:
             reject(f"input_index {pin} is out of range for '{dst.id}' (it has {dst.pin_count} inputs)", dst.id)
             continue
 
-        graph.edges.append(Edge(src.id, dst.id, pin))
+        source_pin = conn.output_index or 0
+        if source_pin >= max(src.out_count, 1):
+            reject(f"output_index {source_pin} is out of range for '{src.id}' (it has {src.out_count} outputs)", src.id)
+            continue
+
+        graph.edges.append(Edge(src.id, dst.id, pin, source_pin))
         pin_drivers[dst.id][pin].append(src.id)
+        pin_sources[dst.id][pin].append((src.id, source_pin))
         if dst.id not in successors[src.id]:
             successors[src.id].append(dst.id)
 
     graph._pin_drivers = {k: dict(v) for k, v in pin_drivers.items()}
+    graph._pin_sources = {k: dict(v) for k, v in pin_sources.items()}
     graph._successors = dict(successors)
     return graph

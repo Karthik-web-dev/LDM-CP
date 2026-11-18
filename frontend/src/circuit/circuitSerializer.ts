@@ -24,8 +24,12 @@ export function serializeCircuit(state: EditorState): NormalizedCircuit {
       .map((c) => ({ id: c.id, label: c.label ?? c.id, position: pos(c.x, c.y) })),
     connections: state.wires.map((w) => {
       const target = byId.get(w.to);
-      // Gate pins are always explicit; outputs have a single pin.
-      return target?.kind === "gate" ? { from: w.from, to: w.to, input_index: w.pin } : { from: w.from, to: w.to };
+      // Gate pins are always explicit; outputs have a single pin. output_index is only needed
+      // for the extra outputs of multi-output blocks.
+      const conn: NormalizedCircuit["connections"][number] = { from: w.from, to: w.to };
+      if (target?.kind === "gate") conn.input_index = w.pin;
+      if (w.fromPin) conn.output_index = w.fromPin;
+      return conn;
     }),
   };
 }
@@ -52,7 +56,13 @@ export function deserializeCircuit(circuit: NormalizedCircuit): EditorState {
     })),
     ...circuit.outputs.map((o) => ({ id: o.id, kind: "output" as const, label: o.label, pinCount: 1, ...at(o.position) })),
   ];
-  const wires = circuit.connections.map((c, i) => ({ id: `wire_${i + 1}`, from: c.from, to: c.to, pin: c.input_index ?? 0 }));
+  const wires = circuit.connections.map((c, i) => ({
+    id: `wire_${i + 1}`,
+    from: c.from,
+    ...(c.output_index ? { fromPin: c.output_index } : {}),
+    to: c.to,
+    pin: c.input_index ?? 0,
+  }));
 
   return {
     components,

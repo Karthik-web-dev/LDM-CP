@@ -22,7 +22,7 @@ The AI's own `valid` claim is kept as `model_verdict` for transparency. It is fl
 backend/app/
   main.py                      FastAPI app, CORS, body-size limit, 422 formatting
   config.py                    Settings + Limits (env vars / .env)
-  api/routes/validation.py     POST /validate, POST /tasks/preview, GET /tasks, GET /gates (thin: no logic)
+  api/routes/validation.py     /validate, /generate, /demo/*, /golden/*, /tasks, /kmap, /gates (thin: no logic)
   api/dependencies.py          Wiring: service + task repository
   models/                      Pydantic: circuit, task, analysis results, AI, API envelopes
   analysis/
@@ -38,6 +38,12 @@ backend/app/
     expression_parser.py       Parses target equations ("(A AND B) OR NOT C", "A & B | !C", "A'B + AB'")
     expected_function.py       The target, as an equation or a truth table (with don't-cares), evaluable per row
     minimize.py                Quine-McCluskey: truth table -> simplified sum-of-products (for display)
+    sequential.py              Circuits with memory (flip-flops, gate-level latches): simulate steps, compare outputs
+  generator/
+    circuit_builder.py         Netlist builder and expressions -> gate-level circuit JSON
+    layout.py                  Automatic placement; keeps existing positions when improving a circuit
+    prompts.py                 Prompts for the three AI build modes
+    aliases.py                 Phrases that name each exercise
   ai/
     client.py                  AIValidator interface; Anthropic, Mock, Disabled implementations
     prompts.py                 System prompt + data-only user message
@@ -45,6 +51,12 @@ backend/app/
   services/
     validation_service.py      The orchestration pipeline
     task_repository.py         Built-in exercises from data/tasks.json
+    generation_service.py      AI build: ask, verify, retry with the exact errors, fall back safely
+    demo_matcher.py            Deterministic text -> stored circuit (lenient for demo mode, strict for AI text)
+    golden_repository.py       Stored, verified circuits (data/golden)
+  tools/
+    build_golden.py            Regenerate the stored circuits
+    backtest.py                Prove every exercise still passes with its stored circuit
 ```
 
 ## Pipeline (`ValidationService.validate`)
@@ -59,6 +71,22 @@ backend/app/
 8. **Truth tables.** Build them over the union of circuit and task variables, for the circuit and for the expected function.
 9. **Equivalence.** Compare output columns. Don't-care rows of a truth-table target always match. Single-output tasks match the single circuit output regardless of label; multi-output tasks match by label. The result includes mismatch counts and counterexample rows.
 10. **AI** (optional). Build the payload, check its size, call the provider, validate the response, and reconcile it with the exact verdict.
+
+## Circuits with memory
+
+Exercises with a `sequence` skip the truth-table pipeline. `sequential.py` simulates the circuit step by step: set the inputs, give a clock pulse if the exercise has a clock, read the outputs. Flip-flop ICs sample on their active clock edge; gates wired in a feedback loop (a NAND latch) are evaluated in circuit order until they settle, and a circuit that never settles is reported as `UNSTABLE_CIRCUIT`. Feedback loops stay an error in combinational exercises.
+
+## AI circuit generation (`GenerationService`)
+
+The AI is never trusted: its circuit is shown only after the same exact analysis that grades students says it is correct.
+
+1. **Ask.** Three intents: `describe` (words only; the AI also returns a `spec`, which is validated into a task), `target` (from scratch for a target) and `extend` (build on the student's circuit; it is sent with the checker's verdict on it).
+2. **Verify.** Parse the reply tolerantly, validate it, run `ValidationService.analyze` against the target (or the AI's own spec).
+3. **Retry.** On failure, send the exact problems back (up to `GENERATE_ATTEMPTS`).
+4. **Place.** `apply_layout` positions the circuit; for `extend` the student's parts keep their places.
+5. **Fall back.** `target` falls back to the stored circuit, `describe` to a stored circuit only when the text strictly names it, `extend` never replaces the student's circuit.
+
+Demo mode skips step 1-3 and opens a stored circuit chosen by `DemoMatcher`. `python -m app.tools.backtest` proves the stored circuits pass.
 
 ## Design rules (from the spec)
 

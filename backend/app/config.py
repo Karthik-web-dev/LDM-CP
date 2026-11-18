@@ -51,6 +51,11 @@ class Settings(BaseSettings):
     ai_response_format: Literal["json_schema", "json_object", "none"] = "json_schema"
     # Optional OpenRouter attribution (shown on openrouter.ai); sent as the HTTP-Referer header.
     ai_app_url: str | None = None
+    # Circuit generator: attempts (each retry is told the exact problems), overall time limit, reply size.
+    # Reasoning models spend most of their tokens thinking before they answer, so both are generous.
+    generate_attempts: int = 3
+    generate_timeout_seconds: float = 240.0
+    generate_max_tokens: int = 16000
     # Ask the AI tutor for feedback even when the deterministic analysis says the circuit is correct.
     ai_on_correct: bool = True
 

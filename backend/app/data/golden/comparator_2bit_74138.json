@@ -1,0 +1,301 @@
+{
+  "task_id": "comparator_2bit_74138",
+  "title": "2-bit comparator with 74138 decoders",
+  "source": "reference",
+  "circuit": {
+    "version": 1,
+    "inputs": [
+      {
+        "id": "input_1",
+        "label": "A1",
+        "position": {
+          "x": 40,
+          "y": 40
+        }
+      },
+      {
+        "id": "input_2",
+        "label": "A0",
+        "position": {
+          "x": 40,
+          "y": 100
+        }
+      },
+      {
+        "id": "input_3",
+        "label": "B1",
+        "position": {
+          "x": 40,
+          "y": 160
+        }
+      },
+      {
+        "id": "input_4",
+        "label": "B0",
+        "position": {
+          "x": 40,
+          "y": 230
+        }
+      }
+    ],
+    "gates": [
+      {
+        "id": "gate_1",
+        "type": "VCC",
+        "inputs": 0,
+        "position": {
+          "x": 40,
+          "y": 290
+        }
+      },
+      {
+        "id": "gate_2",
+        "type": "GND",
+        "inputs": 0,
+        "position": {
+          "x": 40,
+          "y": 360
+        }
+      },
+      {
+        "id": "gate_3",
+        "type": "74138",
+        "inputs": 6,
+        "position": {
+          "x": 190,
+          "y": 40
+        }
+      },
+      {
+        "id": "gate_4",
+        "type": "74138",
+        "inputs": 6,
+        "position": {
+          "x": 190,
+          "y": 270
+        }
+      },
+      {
+        "id": "gate_5",
+        "type": "NAND",
+        "inputs": 6,
+        "position": {
+          "x": 380,
+          "y": 320
+        }
+      },
+      {
+        "id": "gate_6",
+        "type": "NAND",
+        "inputs": 4,
+        "position": {
+          "x": 380,
+          "y": 200
+        }
+      },
+      {
+        "id": "gate_7",
+        "type": "NAND",
+        "inputs": 6,
+        "position": {
+          "x": 380,
+          "y": 40
+        }
+      }
+    ],
+    "outputs": [
+      {
+        "id": "output_1",
+        "label": "Agt",
+        "position": {
+          "x": 540,
+          "y": 160
+        }
+      },
+      {
+        "id": "output_2",
+        "label": "Aeq",
+        "position": {
+          "x": 540,
+          "y": 100
+        }
+      },
+      {
+        "id": "output_3",
+        "label": "Alt",
+        "position": {
+          "x": 540,
+          "y": 40
+        }
+      }
+    ],
+    "connections": [
+      {
+        "from": "input_2",
+        "to": "gate_3",
+        "input_index": 0
+      },
+      {
+        "from": "input_4",
+        "to": "gate_3",
+        "input_index": 1
+      },
+      {
+        "from": "input_3",
+        "to": "gate_3",
+        "input_index": 2
+      },
+      {
+        "from": "input_2",
+        "to": "gate_4",
+        "input_index": 0
+      },
+      {
+        "from": "input_4",
+        "to": "gate_4",
+        "input_index": 1
+      },
+      {
+        "from": "input_3",
+        "to": "gate_4",
+        "input_index": 2
+      },
+      {
+        "from": "gate_1",
+        "to": "gate_3",
+        "input_index": 3
+      },
+      {
+        "from": "input_1",
+        "to": "gate_3",
+        "input_index": 4
+      },
+      {
+        "from": "gate_2",
+        "to": "gate_3",
+        "input_index": 5
+      },
+      {
+        "from": "input_1",
+        "to": "gate_4",
+        "input_index": 3
+      },
+      {
+        "from": "gate_2",
+        "to": "gate_4",
+        "input_index": 4
+      },
+      {
+        "from": "gate_2",
+        "to": "gate_4",
+        "input_index": 5
+      },
+      {
+        "from": "gate_3",
+        "to": "gate_5",
+        "input_index": 0,
+        "output_index": 1
+      },
+      {
+        "from": "gate_4",
+        "to": "gate_5",
+        "input_index": 1
+      },
+      {
+        "from": "gate_4",
+        "to": "gate_5",
+        "input_index": 2,
+        "output_index": 2
+      },
+      {
+        "from": "gate_4",
+        "to": "gate_5",
+        "input_index": 3,
+        "output_index": 1
+      },
+      {
+        "from": "gate_4",
+        "to": "gate_5",
+        "input_index": 4,
+        "output_index": 3
+      },
+      {
+        "from": "gate_4",
+        "to": "gate_5",
+        "input_index": 5,
+        "output_index": 5
+      },
+      {
+        "from": "gate_5",
+        "to": "output_1"
+      },
+      {
+        "from": "gate_3",
+        "to": "gate_6",
+        "input_index": 0
+      },
+      {
+        "from": "gate_3",
+        "to": "gate_6",
+        "input_index": 1,
+        "output_index": 3
+      },
+      {
+        "from": "gate_4",
+        "to": "gate_6",
+        "input_index": 2,
+        "output_index": 4
+      },
+      {
+        "from": "gate_4",
+        "to": "gate_6",
+        "input_index": 3,
+        "output_index": 7
+      },
+      {
+        "from": "gate_6",
+        "to": "output_2"
+      },
+      {
+        "from": "gate_3",
+        "to": "gate_7",
+        "input_index": 0,
+        "output_index": 2
+      },
+      {
+        "from": "gate_3",
+        "to": "gate_7",
+        "input_index": 1,
+        "output_index": 4
+      },
+      {
+        "from": "gate_3",
+        "to": "gate_7",
+        "input_index": 2,
+        "output_index": 6
+      },
+      {
+        "from": "gate_3",
+        "to": "gate_7",
+        "input_index": 3,
+        "output_index": 5
+      },
+      {
+        "from": "gate_3",
+        "to": "gate_7",
+        "input_index": 4,
+        "output_index": 7
+      },
+      {
+        "from": "gate_4",
+        "to": "gate_7",
+        "input_index": 5,
+        "output_index": 6
+      },
+      {
+        "from": "gate_7",
+        "to": "output_3"
+      }
+    ]
+  }
+}

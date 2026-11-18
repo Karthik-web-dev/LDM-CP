@@ -66,6 +66,21 @@ Automated tests never call a real AI provider (they use `MockAIValidator` or a s
 - **Circuit JSON** tab shows exactly what is sent to the backend.
 - Circuits autosave per exercise in the browser.
 
+## Demo mode and the AI circuit builder
+
+Every built-in exercise has a stored, verified circuit in `backend/app/data/golden/`.
+
+- **Demo mode** (checkbox in the title bar): no AI is called anywhere. Type what you want in the **AI build** tab (for example `half adder` or `full adder using 74153`) and the matching stored circuit opens, switching to its exercise, and is checked offline in well under a second. The **Load demo** button opens the selected exercise's circuit. Use it when presenting.
+- **Backtest**: proves every exercise still has a stored circuit that passes. Run it before a demo:
+
+```bash
+cd backend && ../venv/Scripts/python.exe -m app.tools.backtest
+```
+
+  It also runs as part of `pytest` (`tests/test_golden.py`), so deleting or breaking a stored circuit fails the tests. Regenerate the reference circuits with `python -m app.tools.build_golden`.
+- **Build with AI** (AI build tab, demo mode off) has three modes: **Describe it** (plain words, no target: the AI states the target it built to), **Build for target** (from scratch for the selected target), and **Improve my circuit** (builds on what is on the workspace, keeping your parts and positions). In every mode the AI's circuit is verified by the exact checker and failures are fed back so it can retry (up to `GENERATE_ATTEMPTS`, default 3, within `GENERATE_TIMEOUT_SECONDS`, default 240). Modes 1 and 2 fall back to a stored circuit if the AI fails (labelled as a fallback); mode 3 never replaces your circuit. See `docs/HOW_TO_START.md` section 8.
+- Use a fast model for live building (set `AI_MODEL` in `backend/.env`). Free models can be slow or get retired; the response says which model was not found.
+
 ## Documentation
 
 - [HOW_TO_START.md](HOW_TO_START.md): step-by-step setup, API key, troubleshooting

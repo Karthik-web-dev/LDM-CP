@@ -28,6 +28,8 @@ class IssueType(str, Enum):
     MISSING_TASK_INPUT = "MISSING_TASK_INPUT"
     EXTRA_INPUT = "EXTRA_INPUT"
     INVALID_TASK = "INVALID_TASK"
+    SEQUENTIAL_CIRCUIT = "SEQUENTIAL_CIRCUIT"  # flip-flops in an exercise that checks a combinational function
+    UNSTABLE_CIRCUIT = "UNSTABLE_CIRCUIT"  # a feedback circuit that never settles (an oscillator)
 
 
 Severity = Literal["error", "warning"]
@@ -74,6 +76,21 @@ class OutputComparison(BaseModel):
     mismatch_count: int = 0
 
 
+class SequenceRow(BaseModel):
+    step: int  # 1-based clock pulse
+    inputs: dict[str, int]  # inputs applied for this pulse (the clock itself is implied)
+    expected: dict[str, int]
+    actual: dict[str, int]
+    ok: bool
+
+
+class SequenceResult(BaseModel):
+    clock: str | None  # None for latches, which have no clock
+    rows: list[SequenceRow]
+    all_match: bool
+    first_mismatch: int | None = None  # step number of the first wrong row
+
+
 class DeterministicResult(BaseModel):
     structurally_valid: bool
     # Expression of the first (or only) output; convenience for single-output tasks.
@@ -85,6 +102,8 @@ class DeterministicResult(BaseModel):
     equivalent_to_expected: bool = False
     comparisons: list[OutputComparison] = Field(default_factory=list)
     evaluation_order: list[str] = Field(default_factory=list)
+    # Set for sequential exercises: the behaviour over clock pulses (no truth table is produced).
+    sequence: SequenceResult | None = None
     errors: list[StructuralIssue] = Field(default_factory=list)
     warnings: list[StructuralIssue] = Field(default_factory=list)
 

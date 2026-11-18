@@ -1,0 +1,144 @@
+{
+  "task_id": "sync_updown_counter_2bit",
+  "title": "Synchronous 2-bit up/down counter (7476)",
+  "source": "reference",
+  "circuit": {
+    "version": 1,
+    "inputs": [
+      {
+        "id": "input_1",
+        "label": "CLK",
+        "position": {
+          "x": 40,
+          "y": 40
+        }
+      },
+      {
+        "id": "input_2",
+        "label": "M",
+        "position": {
+          "x": 40,
+          "y": 100
+        }
+      }
+    ],
+    "gates": [
+      {
+        "id": "gate_1",
+        "type": "7476",
+        "inputs": 10,
+        "position": {
+          "x": 190,
+          "y": 40
+        }
+      },
+      {
+        "id": "gate_2",
+        "type": "VCC",
+        "inputs": 0,
+        "position": {
+          "x": 40,
+          "y": 160
+        }
+      },
+      {
+        "id": "gate_3",
+        "type": "XOR",
+        "inputs": 2,
+        "position": {
+          "x": 380,
+          "y": 40
+        }
+      }
+    ],
+    "outputs": [
+      {
+        "id": "output_1",
+        "label": "Q1",
+        "position": {
+          "x": 540,
+          "y": 40
+        }
+      },
+      {
+        "id": "output_2",
+        "label": "Q0",
+        "position": {
+          "x": 540,
+          "y": 100
+        }
+      }
+    ],
+    "connections": [
+      {
+        "from": "input_1",
+        "to": "gate_1",
+        "input_index": 0
+      },
+      {
+        "from": "input_1",
+        "to": "gate_1",
+        "input_index": 5
+      },
+      {
+        "from": "gate_2",
+        "to": "gate_1",
+        "input_index": 1
+      },
+      {
+        "from": "gate_2",
+        "to": "gate_1",
+        "input_index": 2
+      },
+      {
+        "from": "gate_2",
+        "to": "gate_1",
+        "input_index": 3
+      },
+      {
+        "from": "gate_2",
+        "to": "gate_1",
+        "input_index": 4
+      },
+      {
+        "from": "gate_2",
+        "to": "gate_1",
+        "input_index": 6
+      },
+      {
+        "from": "gate_2",
+        "to": "gate_1",
+        "input_index": 7
+      },
+      {
+        "from": "gate_1",
+        "to": "gate_3",
+        "input_index": 0
+      },
+      {
+        "from": "input_2",
+        "to": "gate_3",
+        "input_index": 1
+      },
+      {
+        "from": "gate_3",
+        "to": "gate_1",
+        "input_index": 8
+      },
+      {
+        "from": "gate_3",
+        "to": "gate_1",
+        "input_index": 9
+      },
+      {
+        "from": "gate_1",
+        "to": "output_1",
+        "output_index": 2
+      },
+      {
+        "from": "gate_1",
+        "to": "output_2"
+      }
+    ]
+  }
+}

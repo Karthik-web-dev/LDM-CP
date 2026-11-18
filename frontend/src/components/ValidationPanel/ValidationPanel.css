@@ -146,3 +146,12 @@ details.sub-section > summary { cursor: pointer; font-size: 13px; font-weight: 6
 .anomalies { margin-top: 10px; font-size: 12px; color: var(--warn); }
 .anomalies p { margin: 2px 0; }
 .ai-model { margin: 10px 0 0; font-size: 11px; color: var(--text-faint); font-family: var(--mono); }
+
+/* ---- sequential exercises ---- */
+.sequence h3 { margin: 0 0 4px; font-size: 13px; }
+.sequence p { margin: 0 0 6px; }
+.sequence-table { width: 100%; border-collapse: collapse; font-size: 12.5px; background: #fff; border: 2px solid; border-color: #808080 #fff #fff #808080; }
+.sequence-table th, .sequence-table td { padding: 3px 8px; text-align: center; border-bottom: 1px solid var(--border); }
+.sequence-table thead th { background: var(--surface-3); font-weight: 700; }
+.sequence-table code { font-family: var(--mono); font-weight: 700; letter-spacing: 0.1em; }
+.sequence-table tr.bad td { background: var(--danger-bg); }

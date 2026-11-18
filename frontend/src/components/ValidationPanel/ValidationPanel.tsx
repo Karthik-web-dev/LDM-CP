@@ -1,4 +1,4 @@
-import type { AIFeedback, AIMode, Target, ValidateResponse } from "../../api/validationApi";
+import type { AIFeedback, AIMode, SequenceResult, Target, ValidateResponse } from "../../api/validationApi";
 import type { NormalizedCircuit } from "../../circuit/circuitTypes";
 import { BooleanExpression } from "../BooleanExpression/BooleanExpression";
 import { ErrorMessage, IssueList } from "../ErrorMessage/ErrorMessage";
@@ -20,9 +20,11 @@ interface Props {
   kmapTarget: Target | null;
   circuit: NormalizedCircuit;
   circuitVersion: string;
+  /** Sequential exercises have no truth table or K-map. */
+  sequential?: boolean;
 }
 
-export function ValidationPanel({ phase, result, ai, aiMode, error, stale, onFocus, onHint, kmapTarget, circuit, circuitVersion }: Props) {
+export function ValidationPanel({ phase, result, ai, aiMode, error, stale, onFocus, onHint, kmapTarget, circuit, circuitVersion, sequential }: Props) {
   if (error) return <ErrorMessage message={error} />;
   if (phase === "analyzing" && !result) return <p className="status-line"><Spinner /> Analyzing circuit…</p>;
   if (phase === "feedback" && !result) return <p className="status-line"><Spinner /> Asking the tutor…</p>;
@@ -35,9 +37,11 @@ export function ValidationPanel({ phase, result, ai, aiMode, error, stale, onFoc
           The circuit analysis is exact: its Boolean expression and complete truth table are computed from your wiring.
           The AI tutor only explains the result.
         </p>
-        <div className="panel-empty-kmap">
-          <KMapPanel target={kmapTarget} version={circuitVersion} />
-        </div>
+        {!sequential && (
+          <div className="panel-empty-kmap">
+            <KMapPanel target={kmapTarget} version={circuitVersion} />
+          </div>
+        )}
       </div>
     );
   }
@@ -56,9 +60,9 @@ export function ValidationPanel({ phase, result, ai, aiMode, error, stale, onFoc
           <div className="verdict-title">{result.is_correct ? "Correct" : complete ? "Not correct yet" : "Circuit incomplete"}</div>
           <div className="verdict-sub">
             {result.is_correct
-              ? "Matches the target for every input combination."
+              ? det.sequence ? "Matches the expected outputs on every clock pulse." : "Matches the target for every input combination."
               : complete
-                ? "Your circuit works, but it computes a different function from the target."
+                ? det.sequence ? "Your circuit works, but it does not follow the expected sequence." : "Your circuit works, but it computes a different function from the target."
                 : "Fix the problems below so the circuit can be analysed."}
           </div>
         </div>
@@ -121,6 +125,8 @@ export function ValidationPanel({ phase, result, ai, aiMode, error, stale, onFoc
           </div>
         ))}
 
+        {det.sequence && <SequenceTable sequence={det.sequence} />}
+
         {det.truth_table && (
           <details className="sub-section" open={det.truth_table.rows.length <= 16}>
             <summary>Truth table <span className="muted">· {det.truth_table.rows.length} rows</span></summary>
@@ -128,9 +134,11 @@ export function ValidationPanel({ phase, result, ai, aiMode, error, stale, onFoc
           </details>
         )}
 
-        <div className="sub-section kmap-section">
-          <KMapPanel target={kmapTarget} circuit={complete ? circuit : undefined} version={circuitVersion} />
-        </div>
+        {!sequential && (
+          <div className="sub-section kmap-section">
+            <KMapPanel target={kmapTarget} circuit={complete ? circuit : undefined} version={circuitVersion} />
+          </div>
+        )}
       </section>
 
       <section className="card card-ai">
@@ -181,6 +189,45 @@ function AIFeedbackView({ phase, ai, onFocus }: { phase: Phase; ai: AIFeedback |
       {ai.concept && <p className="ai-concept">{ai.concept}</p>}
       {ai.anomalies.length > 0 && <div className="anomalies">{ai.anomalies.map((a, i) => <p key={i}>{a}</p>)}</div>}
       {ai.model && <p className="ai-model">{ai.model}</p>}
+    </div>
+  );
+}
+
+/** Expected vs actual outputs after each clock pulse. */
+function SequenceTable({ sequence }: { sequence: SequenceResult }) {
+  const outputs = Object.keys(sequence.rows[0]?.expected ?? {});
+  const inputs = [...new Set(sequence.rows.flatMap((r) => Object.keys(r.inputs)))];
+  const bits = (values: Record<string, number>) => outputs.map((o) => values[o]).join("");
+  return (
+    <div className="sub-section sequence">
+      <h3>Clock pulses</h3>
+      <p className="muted small">
+        Every flip-flop, gate output and input starts at 0. Each row applies the inputs,{" "}
+        {sequence.clock ? <>gives one full pulse on <code>{sequence.clock}</code>, and reads</> : "lets the circuit settle, and reads"}{" "}
+        <code>{outputs.join(" ")}</code>.
+      </p>
+      <table className="sequence-table">
+        <thead>
+          <tr>
+            <th>Pulse</th>
+            {inputs.map((i) => <th key={i}>{i}</th>)}
+            <th>Expected</th>
+            <th>You got</th>
+            <th aria-label="Result" />
+          </tr>
+        </thead>
+        <tbody>
+          {sequence.rows.map((r) => (
+            <tr key={r.step} className={r.ok ? "" : "bad"}>
+              <td>{r.step}</td>
+              {inputs.map((i) => <td key={i}>{r.inputs[i] ?? "·"}</td>)}
+              <td><code>{bits(r.expected)}</code></td>
+              <td><code>{bits(r.actual)}</code></td>
+              <td className={r.ok ? "check ok" : "check bad"}>{r.ok ? "✓" : "✕"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

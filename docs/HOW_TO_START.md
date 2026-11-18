@@ -136,7 +136,113 @@ The dev server forwards `/api/...` requests to the backend on port 8000, so no e
 
 ---
 
-## 7. Run the tests (optional)
+## 7. Load a circuit in demo mode (for presentations)
+
+Every built-in exercise has a stored, verified circuit. Demo mode loads it in under a second and never calls the AI, so it cannot be affected by the network or by an API key problem.
+
+**Before you present, run the backtest** (it proves every stored circuit still passes its exercise):
+
+```powershell
+cd backend
+..\venv\Scripts\python.exe -m app.tools.backtest
+```
+
+You should see `PASS` on every line and `18/18 exercises pass` (the number grows if you add exercises). Any `FAIL` names the exercise to fix.
+
+**To open a circuit by asking for it:**
+
+1. Tick **Demo mode** in the blue title bar (top right). While it is on, the AI is never called: **Hint** is disabled and **Validate** shows only the exact analysis.
+2. Open the **AI build** tab.
+3. Type what you want in **What should I open?** and press **Enter** (or click **Open stored circuit**). For example:
+   - `half adder`
+   - `full adder`
+   - `full adder using mux` (the stored version uses 74153 ICs)
+   - `2 bit comparator using decoder`
+   - `ripple counter`
+   - `4 bit shift register`
+   - `sr flip flop` or `sr latch`
+   - `excess-3 to BCD` (direction matters: `BCD to excess-3` opens the other converter)
+4. The app finds the stored circuit that matches your words, **switches to that exercise by itself** (you do not have to pick it first), puts the circuit on the workspace and checks it. You see a yellow tag such as **Stored reference circuit for "Half adder"**, **Correct** in the Validation tab, and the Boolean expressions and truth table.
+
+Matching is plain text matching, not AI: the same words always open the same circuit, and it works without internet. Capitals, punctuation and filler words do not matter (`Build me a half-adder please` works). Each stored circuit is built either from basic gates or using an IC; the list in the tab marks every one with **gates** or **IC**.
+
+If nothing matches, the tab says so and suggests close names. You can always click a name in the **Stored circuits** list in the same tab to open it directly.
+
+**Other ways to load one:** pick the exercise in the dropdown and press **Load demo** in the toolbar.
+
+**Counters and registers (the Clock part):** the clock input of a counter or shift register is a **Clock** part, drawn with a square-wave symbol and its frequency (for example `1 Hz`).
+- **Run clocks** (toolbar) starts every clock; the button becomes **Stop clocks**. The counter then counts by itself, one step per clock period (a 2-bit counter at 1 Hz changes once a second). The clock shows `▶ running` while it runs.
+- **Change the speed:** click the Clock part, choose a frequency (0.5, 1, 2, 5 or 10 Hz) in the bar above the workspace, and use **Run clock** / **Stop clock** to run just that one.
+- **Step by hand:** with the clock stopped, click it to flip it, or press **Pulse** for one full clock pulse (one count).
+- **Reset flip-flops** (toolbar) returns every flip-flop to 0.
+- **Add your own:** drag **Clock** from *Sources & Indicators* in the parts bin. Several clocks are fine, each with its own frequency. Any ordinary switch can also be clocked at 1 Hz with **Auto clock**.
+- The 7476 counts on the **falling** edge of the clock and the 7474 on the **rising** edge, so the count changes at that point of each period.
+
+The tag disappears as soon as you edit the circuit, because it is then your circuit.
+
+**Exercises that have a stored circuit:** all of them, including *Verification of logic gates*, *Simplify with Boolean algebra*, *Excess-3 to BCD*, *BCD to Excess-3*, *Full adder with 8:1 multiplexers (74153)*, *2-bit comparator with 74138 decoders*, the asynchronous up/down counters, the synchronous up/down counter and the 4-bit shift register.
+
+---
+
+## 8. Build a circuit with the AI (three modes)
+
+The AI builds circuits in three ways. This needs the AI key from step 3 and **Demo mode switched off**. Open the **AI build** tab and choose a mode at the top.
+
+Whichever mode you use, **the AI's circuit is only shown if the exact checker confirms it**. If its answer is wrong, it is told exactly what failed and tries again, up to 3 attempts.
+
+### Mode 1: Describe it (no target, just words)
+
+Use this when you only know what you want, not the exact function.
+
+1. Choose **Describe it**.
+2. Type the request in **What should the circuit do?** and press **Build from description**. For example:
+   - `Build a half adder using logic gates`
+   - `A circuit that outputs 1 when exactly two of three inputs are high`
+   - `2-bit ripple up counter using a 7476`
+   - `A 4-bit shift register with D flip-flops`
+   - `SR flip flop using NAND gates` (a latch: gates wired in a feedback loop)
+3. The AI works out the exact behaviour, writes it down as a **target**, and builds the circuit. The result box shows **Built to this target** (for example `S = A XOR B; Cout = A AND B`), the circuit appears on the workspace, and that target becomes your custom target, so **Validate** checks against it.
+4. **Read the target line and make sure it is what you meant.** The circuit is checked against the AI's own reading of your request. That catches wiring mistakes, but it cannot tell whether the AI understood you. If the target is wrong, change your wording and build again, or edit the target in the **Target** tab.
+
+### Mode 2: Build for target (the target is given)
+
+Use this for an exercise or your own target: the AI builds a new circuit from scratch that matches it.
+
+1. Pick an exercise in the dropdown, or set a **Custom target** (equation or truth table).
+2. Choose **Build for target**. The **Target:** line shows what will be built.
+3. Optionally type **extra instructions** about the design, for example `Use only NAND gates.` or `Use a 74138 and combine its outputs with NAND gates.`
+4. Press **Build with AI**. You can also name a different circuit in the box (`full adder using 74153`) and the app switches to that exercise first.
+
+If the AI fails, the stored circuit for that exercise is shown instead and labelled as a fallback. A custom target has no stored circuit, so you get an error message.
+
+### Mode 3: Improve my circuit (build on what you have)
+
+Use this when you already started a circuit and want the AI to finish or fix it.
+
+1. Select the target (an exercise or a custom target) and build part of the circuit by hand.
+2. Choose **Improve my circuit**.
+3. Optionally say what should change, for example `add the carry output` or `fix the wiring`.
+4. Press **Improve with AI**. The AI sees your circuit and what the checker says is wrong with it. It keeps your parts and positions and only adds, removes or rewires what is needed. New parts appear in a column to the right of yours.
+
+If your circuit already matches the target and you typed nothing, the tab says so and changes nothing. If the AI cannot finish, **your circuit is left exactly as it was**; a stored circuit is never swapped in over your work.
+
+### What the result box tells you
+
+| Label | Meaning |
+|---|---|
+| **AI-generated and verified** (with the number of attempts and the model name) | The AI built it and it passed the check. |
+| **Stored circuit (the AI could not finish)** | Modes 1 and 2 only: the AI failed, so a stored circuit is shown. The note says why. In mode 1 it is the stored circuit whose name matches your words. |
+| **No change made** | Mode 3: nothing needed to change, or the AI could not improve it. |
+
+**Tips:**
+
+- A live attempt takes roughly 10 to 60 seconds, depending on the model and the task. The IC-heavy ones (74138 comparator, 74153 full adder) take longest; use Demo mode for those when presenting.
+- Speed and reliability depend on `AI_MODEL` in `backend\.env`. Free models are often slow or get retired. A fast, inexpensive model works best, for example `anthropic/claude-haiku-5.5` on OpenRouter (needs credits). Restart the backend after changing it.
+- Adjust the limits with `GENERATE_ATTEMPTS` (default `3`), `GENERATE_TIMEOUT_SECONDS` (default `240`) and `GENERATE_MAX_TOKENS` (default `16000`) in `backend\.env`. Models that "think" before answering use most of the token budget for thinking, so keep `GENERATE_MAX_TOKENS` high for them.
+
+---
+
+## 9. Run the tests (optional)
 
 ```powershell
 cd backend
@@ -159,6 +265,9 @@ Tests never call the real AI API, so they are free and work offline.
 | AI section says **"AI feedback is not configured"** | No key was found. Check that `AI_API_KEY` is set in `backend\.env` (not `.env.example`), then restart the backend. |
 | AI section says **"authentication failed"** | The key is wrong or revoked. Check it with your provider (OpenRouter: https://openrouter.ai/keys). The startup log's `ai_provider=` shows which provider the key was matched to; set `AI_PROVIDER` explicitly if it's wrong. |
 | AI section says **"model ... was not found"** | Check `AI_MODEL`. OpenRouter IDs look like `vendor/model`, e.g. `anthropic/claude-opus-5`. |
+| **AI build** shows **"Stored circuit (the AI could not finish)"** | The AI failed, so the safety net loaded the stored circuit. Read the note under the label: *"model ... was not found"* means `AI_MODEL` is wrong or retired; *"took too long"* means the model is slow (use a faster one, or Demo mode). |
+| **Load demo** is greyed out | The exercise has no stored circuit, or you chose *Custom target*, or the backend is not reachable. Restart the backend, then reload the page. |
+| Backtest prints **FAIL ... no golden circuit stored** | Regenerate the stored circuits with `cd backend; ..\venv\Scripts\python.exe -m app.tools.build_golden`, then run the backtest again. |
 | AI section says **"insufficient credits"** | Add credits to your OpenRouter account. |
 | AI section says **"rejected the request"** | The model may not support this request (for example, JSON output). Try a different `AI_MODEL`, or set `AI_RESPONSE_FORMAT=none`. |
 | AI section says **"too many requests"** / **"temporarily unavailable"** | These are rate limits or provider issues. Wait and validate again; the circuit analysis is unaffected. |

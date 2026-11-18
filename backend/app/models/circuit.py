@@ -51,6 +51,9 @@ class Connection(BaseModel):
     to: str = Field(pattern=ID_PATTERN)
     # Which input pin of the target gate. May be omitted for single-input targets.
     input_index: int | None = Field(default=None, ge=0)
+    # Which output pin of the source. Only multi-output blocks (decoder, encoder, DEMUX) have more
+    # than one; omitted means output 0.
+    output_index: int | None = Field(default=None, ge=0)
 
 
 class Circuit(BaseModel):

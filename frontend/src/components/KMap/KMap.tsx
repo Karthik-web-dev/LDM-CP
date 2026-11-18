@@ -6,7 +6,7 @@ import "./KMap.css";
 const GROUP_COLORS = 6; // matches --group-0 .. --group-5
 
 /** One Karnaugh map with its groups. Everything shown here comes from the backend. */
-export function KMapView({ kmap }: { kmap: KMapData }) {
+function KMapView({ kmap }: { kmap: KMapData }) {
   const [active, setActive] = useState<number | null>(null);
   const groupsAt = new Map<string, number[]>();
   kmap.groups.forEach((g, i) => g.cells.forEach(([r, c]) => {

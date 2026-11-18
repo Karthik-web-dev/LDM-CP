@@ -12,6 +12,28 @@ MAX_TABLE_INPUTS = 10
 TruthValue = Literal[0, 1, "X"]
 
 
+class SequenceStep(BaseModel):
+    """One clock pulse: set ``inputs`` (other inputs keep their value), pulse the clock, check ``outputs``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    inputs: dict[str, Literal[0, 1]] = Field(default_factory=dict, max_length=16)
+    outputs: dict[str, Literal[0, 1]] = Field(min_length=1, max_length=16)
+
+
+class SequenceSpec(BaseModel):
+    """Expected behaviour of a circuit with memory. Every flip-flop, gate output and input starts at 0.
+
+    With a ``clock`` each step gives one clock pulse after setting the inputs. Without one (a latch) each
+    step just sets the inputs and lets the circuit settle.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    clock: str | None = Field(default=None, min_length=1, max_length=32)
+    steps: list[SequenceStep] = Field(min_length=1, max_length=64)
+
+
 class Task(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -30,6 +52,8 @@ class Task(BaseModel):
     inputs: list[str] = Field(default_factory=list, max_length=16)
     outputs: list[str] = Field(default_factory=list, max_length=16)
     hint: str | None = Field(default=None, max_length=1000)
+    # 4. Behaviour over clock pulses, for circuits with flip-flops (counters, shift registers).
+    sequence: SequenceSpec | None = None
 
     @field_validator("expected_truth_table", mode="before")
     @classmethod
@@ -51,9 +75,9 @@ class Task(BaseModel):
 
     @model_validator(mode="after")
     def _check_expected(self) -> "Task":
-        given = [x is not None and x != "" for x in (self.expected_expression, self.expected_outputs, self.expected_truth_table)]
+        given = [x is not None and x != "" for x in (self.expected_expression, self.expected_outputs, self.expected_truth_table, self.sequence)]
         if sum(given) != 1:
-            raise ValueError("Define the target with exactly one of expected_expression, expected_outputs or expected_truth_table")
+            raise ValueError("Define the target with exactly one of expected_expression, expected_outputs, expected_truth_table or sequence")
 
         if self.expected_outputs is not None:
             if not self.expected_outputs or len(self.expected_outputs) > 16:
@@ -76,12 +100,18 @@ class Task(BaseModel):
                     raise ValueError(f"Output {label} needs {rows} values (one per row for {len(self.inputs)} inputs), got {len(column)}")
 
         labels = list(self.inputs) + list(self.outputs) + list(self.expected_outputs or {}) + list(self.expected_truth_table or {})
+        if self.sequence is not None:
+            labels += [self.sequence.clock] if self.sequence.clock else []
+            for step in self.sequence.steps:
+                labels += list(step.inputs) + list(step.outputs)
         for name in labels:
             if not is_valid_identifier(name) or len(name) > 32:
                 raise ValueError(f"'{name[:32]}' is not a valid name. Use letters, digits and _ (starting with a letter), and not an operator name")
         return self
 
     def output_labels(self) -> list[str]:
+        if self.sequence is not None:
+            return list(dict.fromkeys(self.outputs + [o for s in self.sequence.steps for o in s.outputs]))
         if self.expected_truth_table is not None:
             return list(self.expected_truth_table)
         return list(self.resolved_expected_outputs())

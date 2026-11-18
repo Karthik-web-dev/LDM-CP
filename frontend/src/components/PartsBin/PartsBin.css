@@ -1,0 +1,36 @@
+.parts-bin {
+  width: 168px; flex: none;
+  display: flex; flex-direction: column;
+  overflow-y: auto;
+  background: var(--surface);
+  border-color: #ffffff #808080 #808080 #ffffff;
+}
+.bin-title {
+  padding: 3px 8px;
+  background: linear-gradient(90deg, #0a246a 0%, #3a6ea5 100%);
+  color: #ffffff; font-weight: 700; font-size: 12px;
+}
+.bin-section { border-bottom: 2px solid #808080; box-shadow: 0 1px 0 #ffffff; }
+.bin-section > summary {
+  cursor: pointer; padding: 4px 8px; font-weight: 700; font-size: 12px;
+  background: var(--surface-3); user-select: none;
+}
+.bin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 6px; }
+.part-btn {
+  flex-direction: column; gap: 2px;
+  height: auto; min-height: 52px; padding: 4px 2px;
+  cursor: grab;
+}
+.part-btn:active { cursor: grabbing; }
+.part-btn span { font-family: var(--mono); font-size: 9.5px; font-weight: 700; color: var(--text-muted); }
+.part-icon { width: 56px; height: 26px; overflow: visible; }
+.part-icon.block { height: 34px; }
+.part-icon .gate-body, .part-icon .gate-extra, .part-icon .lead { stroke-width: 3; }
+.part-icon .switch-knob { fill: var(--accent); }
+
+.ic-picker { display: flex; flex-direction: column; gap: 6px; padding: 6px; }
+.ic-picker select { width: 100%; min-width: 0; font-size: 11px; }
+.ic-picker p { margin: 0; }
+.part-icon.source { width: 30px; height: 26px; }
+
+.part-icon .clock-wave { stroke-width: 2; }

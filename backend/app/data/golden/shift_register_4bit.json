@@ -1,0 +1,190 @@
+{
+  "task_id": "shift_register_4bit",
+  "title": "4-bit shift register (7474)",
+  "source": "reference",
+  "circuit": {
+    "version": 1,
+    "inputs": [
+      {
+        "id": "input_1",
+        "label": "CLK",
+        "position": {
+          "x": 40,
+          "y": 40
+        }
+      },
+      {
+        "id": "input_2",
+        "label": "DIN",
+        "position": {
+          "x": 40,
+          "y": 100
+        }
+      }
+    ],
+    "gates": [
+      {
+        "id": "gate_1",
+        "type": "7474",
+        "inputs": 8,
+        "position": {
+          "x": 190,
+          "y": 40
+        }
+      },
+      {
+        "id": "gate_2",
+        "type": "7474",
+        "inputs": 8,
+        "position": {
+          "x": 380,
+          "y": 40
+        }
+      },
+      {
+        "id": "gate_3",
+        "type": "VCC",
+        "inputs": 0,
+        "position": {
+          "x": 40,
+          "y": 160
+        }
+      }
+    ],
+    "outputs": [
+      {
+        "id": "output_1",
+        "label": "Q3",
+        "position": {
+          "x": 570,
+          "y": 40
+        }
+      },
+      {
+        "id": "output_2",
+        "label": "Q2",
+        "position": {
+          "x": 570,
+          "y": 100
+        }
+      },
+      {
+        "id": "output_3",
+        "label": "Q1",
+        "position": {
+          "x": 570,
+          "y": 160
+        }
+      },
+      {
+        "id": "output_4",
+        "label": "Q0",
+        "position": {
+          "x": 570,
+          "y": 230
+        }
+      }
+    ],
+    "connections": [
+      {
+        "from": "input_2",
+        "to": "gate_1",
+        "input_index": 0
+      },
+      {
+        "from": "gate_1",
+        "to": "gate_1",
+        "input_index": 4
+      },
+      {
+        "from": "gate_1",
+        "to": "gate_2",
+        "input_index": 0,
+        "output_index": 2
+      },
+      {
+        "from": "gate_2",
+        "to": "gate_2",
+        "input_index": 4
+      },
+      {
+        "from": "input_1",
+        "to": "gate_1",
+        "input_index": 1
+      },
+      {
+        "from": "input_1",
+        "to": "gate_1",
+        "input_index": 5
+      },
+      {
+        "from": "gate_3",
+        "to": "gate_1",
+        "input_index": 2
+      },
+      {
+        "from": "gate_3",
+        "to": "gate_1",
+        "input_index": 3
+      },
+      {
+        "from": "gate_3",
+        "to": "gate_1",
+        "input_index": 6
+      },
+      {
+        "from": "gate_3",
+        "to": "gate_1",
+        "input_index": 7
+      },
+      {
+        "from": "input_1",
+        "to": "gate_2",
+        "input_index": 1
+      },
+      {
+        "from": "input_1",
+        "to": "gate_2",
+        "input_index": 5
+      },
+      {
+        "from": "gate_3",
+        "to": "gate_2",
+        "input_index": 2
+      },
+      {
+        "from": "gate_3",
+        "to": "gate_2",
+        "input_index": 3
+      },
+      {
+        "from": "gate_3",
+        "to": "gate_2",
+        "input_index": 6
+      },
+      {
+        "from": "gate_3",
+        "to": "gate_2",
+        "input_index": 7
+      },
+      {
+        "from": "gate_2",
+        "to": "output_1",
+        "output_index": 2
+      },
+      {
+        "from": "gate_2",
+        "to": "output_2"
+      },
+      {
+        "from": "gate_1",
+        "to": "output_3",
+        "output_index": 2
+      },
+      {
+        "from": "gate_1",
+        "to": "output_4"
+      }
+    ]
+  }
+}

@@ -129,7 +129,7 @@ def validate_structure(circuit: Circuit, limits: Limits) -> StructuralReport:
         add(
             IssueType.CYCLE_DETECTED, "error", exc.cycle[0],
             "The circuit contains a feedback loop (" + " -> ".join(exc.cycle + exc.cycle[:1]) + "). "
-            "Only combinational circuits (no loops) are supported.",
+            "This exercise checks a combinational function, so feedback loops are not allowed (latches have their own exercises).",
             exc.cycle,
         )
 

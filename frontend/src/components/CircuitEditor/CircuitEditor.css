@@ -108,3 +108,16 @@
 .port-hit { fill: transparent; }
 .port-dot { fill: var(--component-fill); stroke: var(--component-stroke); stroke-width: 1.5; }
 .port:hover .port-dot { fill: var(--accent); stroke: var(--accent); }
+
+/* ---- multi-pin blocks ---- */
+.block-title { font-size: 11px; font-weight: 700; fill: var(--text); text-anchor: middle; pointer-events: none; font-family: var(--mono); }
+.block-title.icon { font-size: 11px; }
+.pin-label { font-size: 8.5px; fill: var(--text-muted); font-family: var(--mono); pointer-events: none; }
+.pin-label.end { text-anchor: end; }
+.io-box { stroke-width: 1.5; }
+.rail { stroke-width: 3; stroke-linecap: round; }
+
+/* ---- clock source ---- */
+.clock-wave { fill: none; stroke: var(--wire-off); stroke-width: 2; stroke-linejoin: miter; }
+.clock-wave.on { stroke: var(--signal-on); }
+.clock-hz { font-size: 9px; font-family: var(--mono); fill: var(--text-muted); pointer-events: none; }

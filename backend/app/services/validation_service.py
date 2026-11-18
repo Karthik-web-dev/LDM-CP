@@ -11,6 +11,8 @@ from app.analysis.boolean_ast import render_expression, rendered_length
 from app.analysis.equivalence import compare_columns, map_outputs
 from app.analysis.expected_function import build_expected, expected_truth_table
 from app.analysis.expression_generator import generate_expressions
+from app.analysis.gates import get_gate_definition
+from app.analysis.sequential import UnstableCircuitError, run_sequence
 from app.analysis.kmap import KMapError, build_kmap
 from app.analysis.minimize import minimize_sop
 from app.analysis.graph import NodeKind
@@ -43,6 +45,8 @@ class ValidationService:
 
     def preview_task(self, task: Task) -> TaskPreview:
         """Describe a target both as equations and as a truth table (used by the target editor)."""
+        if task.sequence is not None:
+            return TaskPreview(valid=False, errors=["This exercise is sequential: it is checked over clock pulses, not with a truth table."])
         outputs, problems = build_expected(task)
         if problems:
             return TaskPreview(valid=False, errors=problems)
@@ -65,8 +69,57 @@ class ValidationService:
             truth_table=table,
         )
 
-    def analyze(self, task: Task, circuit: Circuit) -> DeterministicResult:
+    @staticmethod
+    def _has_flip_flops(circuit: Circuit) -> bool:
+        return any((d := get_gate_definition(g.type)) is not None and d.sequential is not None for g in circuit.gates)
+
+    def analyze_sequence(self, task: Task, circuit: Circuit) -> DeterministicResult:
+        """Exercise with memory: simulate the steps and compare the outputs with the expected sequence."""
+        spec = task.sequence
+        assert spec is not None
         report = validate_structure(circuit, self.limits)
+        # Feedback is how latches and counters remember, so loops are not errors here (the simulator
+        # reports a circuit that never settles).
+        errors = [e for e in report.errors if e.type != IssueType.CYCLE_DETECTED]
+        warnings = list(report.warnings)
+
+        input_labels = {i.label for i in circuit.inputs}
+        output_labels = {o.label for o in circuit.outputs}
+        wanted_inputs = ({spec.clock} if spec.clock else set()) | {name for s in spec.steps for name in s.inputs}
+        wanted_outputs = {name for s in spec.steps for name in s.outputs}
+        for name in sorted(wanted_inputs - input_labels):
+            role = "the clock" if name == spec.clock else "an input"
+            errors.append(_issue(IssueType.MISSING_TASK_INPUT, "error", f"The exercise needs {role} labelled {name}, but the circuit has none."))
+        for name in sorted(wanted_outputs - output_labels):
+            errors.append(_issue(IssueType.MISSING_EXPECTED_OUTPUT, "error", f"The exercise expects an output labelled {name}, but the circuit has none."))
+
+        if errors or report.graph is None:
+            return DeterministicResult(structurally_valid=not errors, errors=errors, warnings=warnings)
+
+        try:
+            sequence = run_sequence(report.graph, spec)
+        except UnstableCircuitError:
+            message = "The circuit never settles: some signal keeps changing (it oscillates). Check the feedback wiring and the inputs used in the steps."
+            return DeterministicResult(structurally_valid=True, errors=[_issue(IssueType.UNSTABLE_CIRCUIT, "error", message)], warnings=warnings)
+        logger.info("sequence_checked steps=%d all_match=%s", len(sequence.rows), sequence.all_match)
+        return DeterministicResult(
+            structurally_valid=True,
+            variables=sorted(input_labels),
+            equivalent_to_expected=sequence.all_match,
+            sequence=sequence,
+            warnings=warnings,
+        )
+
+    def analyze(self, task: Task, circuit: Circuit) -> DeterministicResult:
+        if task.sequence is not None:
+            return self.analyze_sequence(task, circuit)
+        report = validate_structure(circuit, self.limits)
+        if not report.has_errors() and self._has_flip_flops(circuit):
+            return DeterministicResult(
+                structurally_valid=True,
+                errors=[_issue(IssueType.SEQUENTIAL_CIRCUIT, "error", "This exercise checks a combinational function (a truth table), but the circuit contains flip-flops. Use a sequential exercise for counters and registers.")],
+                warnings=list(report.warnings),
+            )
         logger.info(
             "structural_validation_completed errors=%d warnings=%d",
             len(report.errors), len(report.warnings),
@@ -164,7 +217,7 @@ class ValidationService:
             "task": {
                 "title": task.title,
                 "description": task.description,
-                "expected_outputs": self._describe_targets(task),
+                "expected_outputs": self.describe_target(task),
             },
             "student_circuit": circuit.model_dump(by_alias=True, exclude_none=True, exclude={
                 "inputs": {"__all__": {"position"}}, "gates": {"__all__": {"position"}}, "outputs": {"__all__": {"position"}},
@@ -177,6 +230,11 @@ class ValidationService:
                 "warnings": [{"type": w.type.value, "component": w.component, "message": w.message} for w in det.warnings],
             },
         }
+        if det.sequence is not None:
+            payload["deterministic_analysis"]["sequence_trace"] = [
+                {"clock_pulse": r.step, "inputs_set": r.inputs, "expected_outputs": r.expected, "actual_outputs": r.actual, "ok": r.ok}
+                for r in det.sequence.rows
+            ]
         if det.truth_table and det.expected_truth_table and len(det.truth_table.rows) <= AI_TRUTH_TABLE_MAX_ROWS:
             payload["deterministic_analysis"]["truth_table"] = [
                 {
@@ -190,7 +248,9 @@ class ValidationService:
         return payload
 
     @staticmethod
-    def _describe_targets(task: Task) -> dict[str, Any]:
+    def describe_target(task: Task) -> dict[str, Any]:
+        if task.sequence is not None:
+            return {"defined_by": "sequence", "clock": task.sequence.clock, "steps": [s.model_dump() for s in task.sequence.steps]}
         expected, _ = build_expected(task)
         if task.expected_truth_table is not None:
             return {

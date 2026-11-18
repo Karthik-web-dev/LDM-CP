@@ -1,8 +1,9 @@
-import { useMemo, useRef, useState, type Dispatch, type PointerEvent as ReactPointerEvent } from "react";
+import { useMemo, useRef, useState, type Dispatch, type DragEvent, type PointerEvent as ReactPointerEvent } from "react";
 import type { EditorAction } from "../../circuit/editorReducer";
-import type { EditorComponent, EditorState, GateType, Wire } from "../../circuit/circuitTypes";
-import { componentSize, hasOutputPin, inputPinPosition, outputPinPosition } from "../../circuit/gateLibrary";
-import type { SignalMap } from "../../circuit/simulator";
+import type { ComponentKind, EditorComponent, EditorState, GateType, Wire } from "../../circuit/circuitTypes";
+import { GATES, componentSize, gateLabel, inputPinPosition, outputCount, outputPinPosition } from "../../circuit/gateLibrary";
+import { signalKey, type SignalMap } from "../../circuit/simulator";
+import { PART_MIME, type PartDrop } from "../PartsBin/PartsBin";
 import "./CircuitEditor.css";
 
 export type Selection = { kind: "component" | "wire"; id: string } | null;
@@ -15,6 +16,8 @@ interface Props {
   onSelect: (s: Selection) => void;
   errorIds: Set<string>;
   focusIds: Set<string>;
+  /** Clock sources (by id) that are currently running, to mark them on the canvas. */
+  running?: Record<string, boolean>;
 }
 
 type PortRef = { comp: string; dir: "in" | "out"; pin: number };
@@ -25,7 +28,7 @@ type Drag =
 const MIN_W = 680;
 const MIN_H = 440;
 
-export function CircuitEditor({ state, dispatch, signals, selection, onSelect, errorIds, focusIds }: Props) {
+export function CircuitEditor({ state, dispatch, signals, selection, onSelect, errorIds, focusIds, running = {} }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
   const byId = useMemo(() => new Map(state.components.map((c) => [c.id, c])), [state.components]);
@@ -51,7 +54,7 @@ export function CircuitEditor({ state, dispatch, signals, selection, onSelect, e
     if (e.button !== 0) return;
     e.stopPropagation();
     const c = byId.get(port.comp)!;
-    const at = port.dir === "out" ? outputPinPosition(c) : inputPinPosition(c, port.pin);
+    const at = port.dir === "out" ? outputPinPosition(c, port.pin) : inputPinPosition(c, port.pin);
     svgRef.current?.setPointerCapture(e.pointerId);
     setDrag({ mode: "wire", port, x0: at.x, y0: at.y, x: at.x, y: at.y });
   };
@@ -82,10 +85,26 @@ export function CircuitEditor({ state, dispatch, signals, selection, onSelect, e
       if (el) {
         const end: PortRef = { comp: el.dataset.comp!, dir: el.dataset.port as "in" | "out", pin: Number(el.dataset.pin ?? 0) };
         const [src, dst] = drag.port.dir === "out" ? [drag.port, end] : [end, drag.port];
-        if (src.dir === "out" && dst.dir === "in") dispatch({ type: "connect", from: src.comp, to: dst.comp, pin: dst.pin });
+        if (src.dir === "out" && dst.dir === "in") dispatch({ type: "connect", from: src.comp, fromPin: src.pin, to: dst.comp, pin: dst.pin });
       }
     }
     setDrag(null);
+  };
+
+  /** A part dragged out of the parts bin and dropped on the canvas. */
+  const onDrop = (e: DragEvent) => {
+    const raw = e.dataTransfer.getData(PART_MIME);
+    if (!raw) return;
+    e.preventDefault();
+    try {
+      const part = JSON.parse(raw) as PartDrop;
+      const p = toSvg(e);
+      const kind: ComponentKind = part.kind;
+      const size = componentSize({ kind, pinCount: 0, gateType: part.gateType, clockHz: part.clock ? 1 : undefined });
+      dispatch({ type: "add", kind, gateType: part.gateType as GateType | undefined, clock: part.clock, x: Math.max(0, p.x - size.w / 2), y: Math.max(0, p.y - size.h / 2) });
+    } catch {
+      /* not one of our parts */
+    }
   };
 
   const wirePath = (x1: number, y1: number, x2: number, y2: number) => {
@@ -97,10 +116,10 @@ export function CircuitEditor({ state, dispatch, signals, selection, onSelect, e
     const from = byId.get(w.from);
     const to = byId.get(w.to);
     if (!from || !to) return null;
-    const a = outputPinPosition(from);
+    const a = outputPinPosition(from, w.fromPin ?? 0);
     const b = inputPinPosition(to, w.pin);
     const d = wirePath(a.x, a.y, b.x, b.y);
-    const v = signals.get(w.from);
+    const v = signals.get(signalKey(w.from, w.fromPin ?? 0));
     const selected = selection?.kind === "wire" && selection.id === w.id;
     return (
       <g key={w.id} className="wire-group" onPointerDown={(e) => { e.stopPropagation(); onSelect({ kind: "wire", id: w.id }); }}>
@@ -111,7 +130,7 @@ export function CircuitEditor({ state, dispatch, signals, selection, onSelect, e
   };
 
   const port = (c: EditorComponent, dir: "in" | "out", pin: number) => {
-    const p = dir === "out" ? outputPinPosition(c) : inputPinPosition(c, pin);
+    const p = dir === "out" ? outputPinPosition(c, pin) : inputPinPosition(c, pin);
     return (
       <g key={`${dir}${pin}`} className="port" data-port={dir} data-comp={c.id} data-pin={pin} onPointerDown={(e) => startWire(e, { comp: c.id, dir, pin })}>
         <circle cx={p.x} cy={p.y} r={11} className="port-hit" />
@@ -135,24 +154,35 @@ export function CircuitEditor({ state, dispatch, signals, selection, onSelect, e
         <g onPointerDown={(e) => startMove(e, c)} className="component-body">
           <text x={c.x} y={c.y - 6} className="component-id">{c.id}</text>
           {c.kind === "gate" && <GateShape x={c.x} y={c.y} w={w} h={h} type={c.gateType!} pins={c.pinCount} />}
-          {c.kind === "input" && (
+          {c.kind === "input" && c.clockHz !== undefined && (
             <>
-              <rect x={c.x} y={c.y} width={w} height={h} rx={6} className="io-box" />
-              <rect x={c.x + 6} y={c.y + 8} width={22} height={16} rx={8} className={`switch ${v ? "on" : ""}`} />
-              <circle cx={c.x + (v ? 20 : 14)} cy={c.y + 16} r={6} className="switch-knob" />
+              <rect x={c.x} y={c.y} width={w} height={h} rx={2} className="io-box" />
+              <path
+                d={`M ${c.x + 6} ${c.y + 22} V ${c.y + 10} H ${c.x + 14} V ${c.y + 22} H ${c.x + 22} V ${c.y + 10} H ${c.x + 30}`}
+                className={`clock-wave ${v ? "on" : ""}`}
+              />
+              <text x={c.x + 36} y={c.y + 21} className="io-label">{c.label}</text>
+              <text x={c.x} y={c.y + h + 11} className="clock-hz">{c.clockHz} Hz{running[c.id] ? " ▶ running" : ""}</text>
+            </>
+          )}
+          {c.kind === "input" && c.clockHz === undefined && (
+            <>
+              <rect x={c.x} y={c.y} width={w} height={h} rx={2} className="io-box" />
+              <rect x={c.x + 6} y={c.y + 8} width={22} height={16} rx={2} className={`switch ${v ? "on" : ""}`} />
+              <rect x={v ? c.x + 17 : c.x + 8} y={c.y + 10} width={9} height={12} className="switch-knob" />
               <text x={c.x + 44} y={c.y + 21} className="io-label">{c.label}</text>
             </>
           )}
           {c.kind === "output" && (
             <>
-              <rect x={c.x} y={c.y} width={w} height={h} rx={6} className="io-box" />
+              <rect x={c.x} y={c.y} width={w} height={h} rx={2} className="io-box" />
               <circle cx={c.x + 18} cy={c.y + 16} r={8} className={`lamp ${v === true ? "on" : v === false ? "off" : "unknown"}`} />
               <text x={c.x + 44} y={c.y + 21} className="io-label">{c.label}</text>
             </>
           )}
         </g>
         {Array.from({ length: c.pinCount }, (_, i) => port(c, "in", i))}
-        {hasOutputPin(c.kind) && port(c, "out", 0)}
+        {Array.from({ length: outputCount(c) }, (_, i) => port(c, "out", i))}
       </g>
     );
   };
@@ -168,6 +198,8 @@ export function CircuitEditor({ state, dispatch, signals, selection, onSelect, e
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerDown={() => onSelect(null)}
+        onDragOver={(e) => { if (e.dataTransfer.types.includes(PART_MIME)) e.preventDefault(); }}
+        onDrop={onDrop}
         role="application"
         aria-label="Circuit editor canvas"
       >
@@ -179,7 +211,7 @@ export function CircuitEditor({ state, dispatch, signals, selection, onSelect, e
         <rect width={width} height={height} fill="url(#grid)" />
         {state.components.length === 0 && (
           <text x={width / 2} y={height / 2} className="empty-hint">
-            Add inputs, gates and outputs from the toolbar, then drag between pins to wire them.
+            Drag parts from the bin onto the workspace, then drag between pins to wire them.
           </text>
         )}
         <g>{state.wires.map(renderWire)}</g>
@@ -191,6 +223,10 @@ export function CircuitEditor({ state, dispatch, signals, selection, onSelect, e
 }
 
 export function GateShape({ x, y, w, h, type, pins, showLabel = true }: { x: number; y: number; w: number; h: number; type: GateType; pins: number; showLabel?: boolean }) {
+  const spec = GATES[type];
+  if (spec.symbol) return <SourceShape x={x} y={y} w={w} h={h} kind={spec.symbol} />;
+  if (spec.block) return <BlockShape x={x} y={y} w={w} h={h} type={type} detail={showLabel} />;
+
   const bubble = type === "NOT" || type === "NAND" || type === "NOR" || type === "XNOR";
   const left = x + 12;
   const right = x + w - (bubble ? 20 : 12);
@@ -219,7 +255,64 @@ export function GateShape({ x, y, w, h, type, pins, showLabel = true }: { x: num
       <path d={body} className="gate-body" />
       {bubble && <circle cx={right + 4} cy={mid} r={4} className="gate-body" />}
       {showLabel && (
-        <text x={(left + right) / 2 - (type === "NOT" || type === "BUFFER" ? 6 : 0)} y={mid + 4} className="gate-label">{type === "BUFFER" ? "BUF" : type}</text>
+        <text x={(left + right) / 2 - (type === "NOT" || type === "BUFFER" ? 6 : 0)} y={mid + 4} className="gate-label">{gateLabel(type)}</text>
+      )}
+    </g>
+  );
+}
+
+/** Constant source symbol: a supply rail for VCC, a ground symbol for GND, with a lead to the output pin. */
+function SourceShape({ x, y, w, h, kind }: { x: number; y: number; w: number; h: number; kind: "vcc" | "gnd" }) {
+  const mid = y + h / 2;
+  return (
+    <g className="gate-shape source-shape">
+      {kind === "vcc" ? (
+        <>
+          <line x1={x + 14} y1={y + 8} x2={x + 14} y2={y + h - 8} className="lead rail" />
+          <line x1={x + 14} y1={mid} x2={x + w} y2={mid} className="lead" />
+        </>
+      ) : (
+        <>
+          <line x1={x + 8} y1={y + 6} x2={x + 8} y2={y + h - 6} className="lead rail" />
+          <line x1={x + 13} y1={y + 12} x2={x + 13} y2={y + h - 12} className="lead rail" />
+          <line x1={x + 18} y1={y + 17} x2={x + 18} y2={y + h - 17} className="lead rail" />
+          <line x1={x + 18} y1={mid} x2={x + w} y2={mid} className="lead" />
+        </>
+      )}
+      <text x={x + w / 2 + 2} y={mid - 6} className="gate-label">{kind === "vcc" ? "VCC" : "GND"}</text>
+    </g>
+  );
+}
+
+/** Rectangular symbol for MUX / DEMUX / decoder / encoder, with a label next to every pin. */
+function BlockShape({ x, y, w, h, type, detail }: { x: number; y: number; w: number; h: number; type: GateType; detail: boolean }) {
+  const { block } = GATES[type];
+  if (!block) return null;
+  const mid = y + h / 2;
+  const pinY = (i: number, n: number) => mid - ((n - 1) * 20) / 2 + i * 20;
+  const left = x + 12;
+  const right = x + w - 12;
+  return (
+    <g className="gate-shape block-shape">
+      {block.inputNames.map((_, i) => (
+        <line key={`i${i}`} x1={x} y1={pinY(i, block.inputNames.length)} x2={left} y2={pinY(i, block.inputNames.length)} className="lead" />
+      ))}
+      {block.outputNames.map((_, i) => (
+        <line key={`o${i}`} x1={right} y1={pinY(i, block.outputNames.length)} x2={x + w} y2={pinY(i, block.outputNames.length)} className="lead" />
+      ))}
+      <rect x={left} y={y + 4} width={right - left} height={h - 8} className="gate-body" />
+      {detail ? (
+        <>
+          <text x={(left + right) / 2} y={y + 17} className="block-title">{block.title}</text>
+          {block.inputNames.map((n, i) => (
+            <text key={`ti${i}`} x={left + 4} y={pinY(i, block.inputNames.length) + 3} className="pin-label">{n}</text>
+          ))}
+          {block.outputNames.map((n, i) => (
+            <text key={`to${i}`} x={right - 4} y={pinY(i, block.outputNames.length) + 3} className="pin-label end">{n}</text>
+          ))}
+        </>
+      ) : (
+        <text x={(left + right) / 2} y={mid + 3} className="block-title icon">{block.title.split(" ")[0]}</text>
       )}
     </g>
   );

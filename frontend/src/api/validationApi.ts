@@ -13,6 +13,23 @@ export interface Task {
   inputs: string[];
   outputs: string[];
   hint?: string | null;
+  /** Behaviour of a circuit with memory (instead of an equation or truth table). No `clock` for a latch. */
+  sequence?: { clock?: string | null; steps: { inputs?: Record<string, number>; outputs: Record<string, number> }[] } | null;
+}
+
+export interface SequenceRow {
+  step: number;
+  inputs: Record<string, number>;
+  expected: Record<string, number>;
+  actual: Record<string, number>;
+  ok: boolean;
+}
+
+export interface SequenceResult {
+  clock: string | null;
+  rows: SequenceRow[];
+  all_match: boolean;
+  first_mismatch: number | null;
 }
 
 export type TruthCell = 0 | 1 | "X";
@@ -53,6 +70,7 @@ export interface DeterministicResult {
   equivalent_to_expected: boolean;
   comparisons: OutputComparison[];
   evaluation_order: string[];
+  sequence?: SequenceResult | null;
   errors: StructuralIssue[];
   warnings: StructuralIssue[];
 }
@@ -121,6 +139,88 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const fetchTasks = () => request<Task[]>("/api/v1/tasks");
+
+/** A stored, verified circuit for a built-in exercise (the demo circuit). */
+export interface GoldenCircuit {
+  task_id: string;
+  title: string;
+  source: string;
+  circuit: NormalizedCircuit;
+}
+
+/** Three ways to ask for a circuit: describe it in words, build for the target, or build on the current circuit. */
+export type BuildIntent = "describe" | "target" | "extend";
+
+export interface GenerateResponse {
+  success: boolean;
+  /** "ai": verified AI circuit. "stored": demo mode. "fallback": the AI failed and the stored circuit is shown. */
+  source: "ai" | "stored" | "fallback" | "none";
+  circuit: NormalizedCircuit | null;
+  explanation: string | null;
+  attempts: number;
+  notice: string | null;
+  model: string | null;
+  /** "describe": the target the AI says it built to (it can be adopted as the student's target). */
+  spec?: Task | null;
+  /** A stored circuit for this exercise was shown, so the workspace should switch to that exercise. */
+  matched_task_id?: string | null;
+}
+
+export function generateCircuit(
+  target: Target | null,
+  prompt: string,
+  mode: "live" | "demo",
+  signal?: AbortSignal,
+  options: { intent?: BuildIntent; circuit?: NormalizedCircuit } = {},
+) {
+  return request<GenerateResponse>("/api/v1/generate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ...(target ? targetRef(target) : {}),
+      mode,
+      intent: options.intent ?? "target",
+      ...(options.circuit ? { circuit: options.circuit } : {}),
+      ...(prompt.trim() ? { prompt: prompt.trim() } : {}),
+    }),
+    signal,
+  });
+}
+
+/** A stored circuit that demo mode can open. `style` says whether it uses basic gates or an IC. */
+export interface DemoEntry {
+  task_id: string;
+  title: string;
+  style: "gates" | "ic";
+  parts: string[];
+}
+
+export interface DemoMatch extends Omit<DemoEntry, "parts"> {
+  score: number;
+  phrase: string;
+  full: boolean; // a whole stored phrase matched (false: only a suggestion)
+}
+
+export interface DemoMatchResponse {
+  /** The circuit to open, or null when the request matched no stored circuit well enough. */
+  best: DemoMatch | null;
+  matches: DemoMatch[];
+}
+
+export const fetchDemoCatalog = () => request<DemoEntry[]>("/api/v1/demo/catalog");
+
+/**
+ * Map a request such as "half adder" to a stored circuit. Deterministic text matching, no AI.
+ * `strict` accepts only distinctive circuit names, so instructions like "use only NAND gates" match nothing.
+ */
+export function matchDemo(prompt: string, strict = false) {
+  return request<DemoMatchResponse>("/api/v1/demo/match", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt, strict }),
+  });
+}
+export const fetchGolden = (taskId: string) => request<GoldenCircuit>(`/api/v1/golden/${encodeURIComponent(taskId)}`);
 
 /** Validate against a built-in exercise (`{ taskId }`) or a user-defined target (`{ task }`). */
 export type Target = { taskId: string } | { task: Task };

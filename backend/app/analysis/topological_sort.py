@@ -2,7 +2,13 @@
 
 import heapq
 
+from app.analysis.gates import get_gate_definition
 from app.analysis.graph import CircuitGraph
+
+
+def _is_sequential(graph: CircuitGraph, node_id: str) -> bool:
+    definition = get_gate_definition(graph.nodes[node_id].gate_type or "")
+    return definition is not None and definition.sequential is not None
 
 
 class CycleDetectedError(Exception):
@@ -20,6 +26,10 @@ def topological_sort(graph: CircuitGraph) -> list[str]:
     in_degree = {nid: 0 for nid in graph.nodes}
     targets: dict[str, list[str]] = {nid: [] for nid in graph.nodes}
     for edge in graph.edges:
+        # A flip-flop stores its value, so its pins do not order it after its drivers: this is
+        # what lets counters and shift registers feed their own outputs back without a "cycle".
+        if _is_sequential(graph, edge.target):
+            continue
         in_degree[edge.target] += 1
         targets[edge.source].append(edge.target)
 

@@ -1,0 +1,343 @@
+{
+  "task_id": "bcd_to_excess3",
+  "title": "BCD to Excess-3 code converter",
+  "source": "reference",
+  "circuit": {
+    "version": 1,
+    "inputs": [
+      {
+        "id": "input_1",
+        "label": "D3",
+        "position": {
+          "x": 40,
+          "y": 40
+        }
+      },
+      {
+        "id": "input_2",
+        "label": "D2",
+        "position": {
+          "x": 40,
+          "y": 100
+        }
+      },
+      {
+        "id": "input_3",
+        "label": "D1",
+        "position": {
+          "x": 40,
+          "y": 160
+        }
+      },
+      {
+        "id": "input_4",
+        "label": "D0",
+        "position": {
+          "x": 40,
+          "y": 230
+        }
+      }
+    ],
+    "gates": [
+      {
+        "id": "gate_1",
+        "type": "AND",
+        "inputs": 2,
+        "position": {
+          "x": 190,
+          "y": 190
+        }
+      },
+      {
+        "id": "gate_2",
+        "type": "AND",
+        "inputs": 2,
+        "position": {
+          "x": 190,
+          "y": 110
+        }
+      },
+      {
+        "id": "gate_3",
+        "type": "OR",
+        "inputs": 3,
+        "position": {
+          "x": 350,
+          "y": 120
+        }
+      },
+      {
+        "id": "gate_4",
+        "type": "NOT",
+        "inputs": 1,
+        "position": {
+          "x": 190,
+          "y": 40
+        }
+      },
+      {
+        "id": "gate_5",
+        "type": "AND",
+        "inputs": 2,
+        "position": {
+          "x": 350,
+          "y": 220
+        }
+      },
+      {
+        "id": "gate_6",
+        "type": "AND",
+        "inputs": 2,
+        "position": {
+          "x": 350,
+          "y": 40
+        }
+      },
+      {
+        "id": "gate_7",
+        "type": "NOT",
+        "inputs": 1,
+        "position": {
+          "x": 190,
+          "y": 270
+        }
+      },
+      {
+        "id": "gate_8",
+        "type": "NOT",
+        "inputs": 1,
+        "position": {
+          "x": 190,
+          "y": 420
+        }
+      },
+      {
+        "id": "gate_9",
+        "type": "AND",
+        "inputs": 3,
+        "position": {
+          "x": 350,
+          "y": 300
+        }
+      },
+      {
+        "id": "gate_10",
+        "type": "OR",
+        "inputs": 3,
+        "position": {
+          "x": 510,
+          "y": 40
+        }
+      },
+      {
+        "id": "gate_11",
+        "type": "AND",
+        "inputs": 2,
+        "position": {
+          "x": 350,
+          "y": 400
+        }
+      },
+      {
+        "id": "gate_12",
+        "type": "AND",
+        "inputs": 2,
+        "position": {
+          "x": 190,
+          "y": 340
+        }
+      },
+      {
+        "id": "gate_13",
+        "type": "OR",
+        "inputs": 2,
+        "position": {
+          "x": 510,
+          "y": 140
+        }
+      }
+    ],
+    "outputs": [
+      {
+        "id": "output_1",
+        "label": "X3",
+        "position": {
+          "x": 670,
+          "y": 100
+        }
+      },
+      {
+        "id": "output_2",
+        "label": "X2",
+        "position": {
+          "x": 670,
+          "y": 40
+        }
+      },
+      {
+        "id": "output_3",
+        "label": "X1",
+        "position": {
+          "x": 670,
+          "y": 160
+        }
+      },
+      {
+        "id": "output_4",
+        "label": "X0",
+        "position": {
+          "x": 670,
+          "y": 230
+        }
+      }
+    ],
+    "connections": [
+      {
+        "from": "input_2",
+        "to": "gate_1",
+        "input_index": 0
+      },
+      {
+        "from": "input_4",
+        "to": "gate_1",
+        "input_index": 1
+      },
+      {
+        "from": "input_2",
+        "to": "gate_2",
+        "input_index": 0
+      },
+      {
+        "from": "input_3",
+        "to": "gate_2",
+        "input_index": 1
+      },
+      {
+        "from": "gate_1",
+        "to": "gate_3",
+        "input_index": 0
+      },
+      {
+        "from": "gate_2",
+        "to": "gate_3",
+        "input_index": 1
+      },
+      {
+        "from": "input_1",
+        "to": "gate_3",
+        "input_index": 2
+      },
+      {
+        "from": "gate_3",
+        "to": "output_1"
+      },
+      {
+        "from": "input_2",
+        "to": "gate_4",
+        "input_index": 0
+      },
+      {
+        "from": "gate_4",
+        "to": "gate_5",
+        "input_index": 0
+      },
+      {
+        "from": "input_4",
+        "to": "gate_5",
+        "input_index": 1
+      },
+      {
+        "from": "gate_4",
+        "to": "gate_6",
+        "input_index": 0
+      },
+      {
+        "from": "input_3",
+        "to": "gate_6",
+        "input_index": 1
+      },
+      {
+        "from": "input_3",
+        "to": "gate_7",
+        "input_index": 0
+      },
+      {
+        "from": "input_4",
+        "to": "gate_8",
+        "input_index": 0
+      },
+      {
+        "from": "input_2",
+        "to": "gate_9",
+        "input_index": 0
+      },
+      {
+        "from": "gate_7",
+        "to": "gate_9",
+        "input_index": 1
+      },
+      {
+        "from": "gate_8",
+        "to": "gate_9",
+        "input_index": 2
+      },
+      {
+        "from": "gate_5",
+        "to": "gate_10",
+        "input_index": 0
+      },
+      {
+        "from": "gate_6",
+        "to": "gate_10",
+        "input_index": 1
+      },
+      {
+        "from": "gate_9",
+        "to": "gate_10",
+        "input_index": 2
+      },
+      {
+        "from": "gate_10",
+        "to": "output_2"
+      },
+      {
+        "from": "gate_7",
+        "to": "gate_11",
+        "input_index": 0
+      },
+      {
+        "from": "gate_8",
+        "to": "gate_11",
+        "input_index": 1
+      },
+      {
+        "from": "input_3",
+        "to": "gate_12",
+        "input_index": 0
+      },
+      {
+        "from": "input_4",
+        "to": "gate_12",
+        "input_index": 1
+      },
+      {
+        "from": "gate_11",
+        "to": "gate_13",
+        "input_index": 0
+      },
+      {
+        "from": "gate_12",
+        "to": "gate_13",
+        "input_index": 1
+      },
+      {
+        "from": "gate_13",
+        "to": "output_3"
+      },
+      {
+        "from": "gate_8",
+        "to": "output_4"
+      }
+    ]
+  }
+}
